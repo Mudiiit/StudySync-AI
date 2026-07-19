@@ -1,0 +1,1395 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String                  @id @default(uuid())
+  email                  String                  @unique
+  passwordHash           String?
+  role                   Role                    @default(STUDENT)
+  isEmailVerified        Boolean                 @default(false)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  aiUsageLogs            AiUsageLog[]
+  achievements           UserAchievement[]
+  xpLogs                 XpLog[]
+  subjectXps             SubjectXp[]
+  leaderboardArchives    LeaderboardArchive[]
+  apiKeys                ApiKey[]
+  attempts               Attempt[]
+  auditLogs              AuditLog[]
+  availabilitySchedule   AvailabilitySchedule?
+  calendars              Calendar[]
+  chatConversations      ChatConversation[]
+  documents              Document[]
+  flashcards             Flashcard[]
+  flashcardDecks         FlashcardDeck[]
+  flashcardStats         FlashcardStat[]
+  goals                  Goal[]
+  habits                 Habit[]
+  notes                  Note[]
+  noteCollaborations     NoteCollaborator[]
+  noteComments           NoteComment[]
+  resolvedComments       NoteComment[]           @relation("ResolvedComments")
+  noteVersions           NoteVersion[]
+  notebooks              Notebook[]
+  notifications          Notification[]
+  notificationPreference NotificationPreference?
+  passwordResetTokens    PasswordResetToken[]
+  pomodoroSessions       PomodoroSession[]
+  profile                Profile?
+  quizzes                Quiz[]
+  refreshTokens          RefreshToken[]
+  socialAccounts         SocialAccount[]
+  spacedRepetitions      SpacedRepetition[]
+  studyGroupsOwned       StudyGroup[]            @relation("GroupOwner")
+  studyGroupMembers      StudyGroupMember[]
+  messages               StudyGroupMessage[]
+  sentFriendRequests     FriendRequest[]         @relation("SentRequests")
+  receivedFriendRequests FriendRequest[]         @relation("ReceivedRequests")
+  friendshipsInitiated   Friendship[]            @relation("UserFriendships")
+  friendshipsReceived    Friendship[]            @relation("FriendOfUser")
+  blockedUsers           UserBlock[]             @relation("BlockedUsers")
+  blockedByUsers         UserBlock[]             @relation("BlockedByUsers")
+  sentGroupInvites       GroupInvite[]           @relation("SentGroupInvites")
+  receivedGroupInvites   GroupInvite[]           @relation("ReceivedGroupInvites")
+  groupAnnouncements     GroupAnnouncement[]     @relation("AnnouncementAuthor")
+  groupResourcesShared   GroupResource[]         @relation("SharedBy")
+  challengeProgress      ChallengeProgress[]
+  sharedNotebooks        SharedNotebookPermission[]
+  studyMetrics           StudyMetric[]
+  studyPlanner           StudyPlanner?
+  subjects               Subject[]
+  tags                   Tag[]
+  tasks                  Task[]
+  taskActivities         TaskActivity[]
+  taskComments           TaskComment[]
+  taskHistories          TaskHistory[]
+  taskLabels             TaskLabel[]
+  taskWorkspaces         TaskWorkspace[]
+  verificationTokens     VerificationToken[]
+
+  @@index([email])
+}
+
+model Profile {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  firstName        String
+  lastName         String
+  avatarUrl        String?
+  timezone         String    @default("UTC")
+  bio              String?
+  username         String?   @unique
+  displayName      String?
+  usernameUpdatedAt DateTime?
+  privacyLevel     String    @default("PUBLIC")
+  showStudyHours   Boolean   @default(true)
+  showStreak       Boolean   @default(true)
+  showBadges       Boolean   @default(true)
+  showNotes        Boolean   @default(true)
+  showAchievements Boolean   @default(true)
+  xp               Int       @default(0)
+  level            Int       @default(1)
+  lifetimeXp       Int       @default(0)
+  levelUpAcknowledged Boolean @default(true)
+  weeklyRank       Int       @default(0)
+  previousWeeklyRank Int     @default(0)
+  monthlyRank      Int       @default(0)
+  previousMonthlyRank Int    @default(0)
+  bestRankEver     Int       @default(0)
+  highestSubjectRank Int     @default(0)
+  winsCount        Int       @default(0)
+  status           String    @default("OFFLINE")
+  lastActiveAt     DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SocialAccount {
+  id         String   @id @default(uuid())
+  userId     String
+  provider   String
+  providerId String   @unique
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String
+  keyHash   String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityName String
+  entityId   String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityName, entityId])
+}
+
+model Subject {
+  id        String          @id @default(uuid())
+  userId    String
+  name      String
+  color     String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  exams     Exam[]
+  decks     FlashcardDeck[]
+  quizzes   Quiz[]
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topics    Topic[]
+
+  @@index([userId])
+}
+
+model Topic {
+  id            String         @id @default(uuid())
+  subjectId     String
+  name          String
+  description   String?
+  difficulty    Difficulty     @default(MEDIUM)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  revisionPlans RevisionPlan[]
+  timeSlots     TimeSlot[]
+  subject       Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([subjectId])
+}
+
+model Exam {
+  id          String   @id @default(uuid())
+  subjectId   String
+  title       String
+  date        DateTime
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([subjectId])
+}
+
+model StudyPlanner {
+  id                  String          @id @default(uuid())
+  userId              String          @unique
+  availableHoursDaily Json
+  learningStyle       LearningStyle   @default(READING)
+  goals               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  dailySchedules      DailySchedule[]
+  revisionPlans       RevisionPlan[]
+  roadmaps            Roadmap[]
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailySchedule {
+  id        String       @id @default(uuid())
+  plannerId String
+  date      DateTime
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  planner   StudyPlanner @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+  timeSlots TimeSlot[]
+
+  @@index([plannerId, date])
+}
+
+model TimeSlot {
+  id              String        @id @default(uuid())
+  dailyScheduleId String
+  startTime       DateTime
+  endTime         DateTime
+  topicId         String
+  priorityScore   Int           @default(1)
+  isCompleted     Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  dailySchedule   DailySchedule @relation(fields: [dailyScheduleId], references: [id], onDelete: Cascade)
+  topic           Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+}
+
+model RevisionPlan {
+  id               String       @id @default(uuid())
+  plannerId        String
+  topicId          String
+  nextRevisionDate DateTime
+  intervalDays     Int          @default(1)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  planner          StudyPlanner @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+  topic            Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+}
+
+model Roadmap {
+  id          String        @id @default(uuid())
+  plannerId   String
+  title       String
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  planner     StudyPlanner  @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+  steps       RoadmapStep[]
+}
+
+model RoadmapStep {
+  id             String  @id @default(uuid())
+  roadmapId      String
+  title          String
+  description    String?
+  order          Int
+  estimatedHours Float
+  isCompleted    Boolean @default(false)
+  roadmap        Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+}
+
+model Calendar {
+  id        String          @id @default(uuid())
+  userId    String
+  name      String
+  color     String
+  isPrimary Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events    CalendarEvent[]
+
+  @@index([userId])
+}
+
+model CalendarEvent {
+  id                 String              @id @default(uuid())
+  calendarId         String
+  title              String
+  description        String?
+  startTime          DateTime
+  endTime            DateTime
+  isAllDay           Boolean             @default(false)
+  location           String?
+  recurringPatternId String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  calendar           Calendar            @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  recurringPattern   RecurringPattern?   @relation(fields: [recurringPatternId], references: [id])
+  notifications      EventNotification[]
+
+  @@index([calendarId, startTime])
+}
+
+model RecurringPattern {
+  id        String          @id @default(uuid())
+  frequency Frequency
+  interval  Int             @default(1)
+  byWeekDay String?
+  until     DateTime?
+  createdAt DateTime        @default(now())
+  events    CalendarEvent[]
+}
+
+model EventNotification {
+  id            String        @id @default(uuid())
+  eventId       String
+  minutesBefore Int           @default(15)
+  method        NotifyMethod  @default(IN_APP)
+  isSent        Boolean       @default(false)
+  event         CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model TaskWorkspace {
+  id          String        @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tasks       Task[]
+  projects    TaskProject[]
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TaskProject {
+  id          String        @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  dueDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tasks       Task[]
+  workspace   TaskWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model Task {
+  id               String             @id @default(uuid())
+  userId           String
+  workspaceId      String
+  projectId        String?
+  title            String
+  description      String?
+  status           TaskStatus         @default(TODO)
+  priority         TaskPriority       @default(MEDIUM)
+  dueDate          DateTime?
+  estimatedMinutes Int?
+  actualMinutes    Int?
+  isCompleted      Boolean            @default(false)
+  inTrash          Boolean            @default(false)
+  order            Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  pomodoroSessions PomodoroSession[]
+  project          TaskProject?       @relation(fields: [projectId], references: [id])
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace        TaskWorkspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activities       TaskActivity[]
+  attachments      TaskAttachment[]
+  checklists       TaskChecklist[]
+  comments         TaskComment[]
+  customFields     TaskCustomField[]
+  dependents       TaskDependency[]   @relation("TaskIsDependentOn")
+  dependencies     TaskDependency[]   @relation("TaskDependsOn")
+  histories        TaskHistory[]
+  labelMappings    TaskLabelMapping[]
+  recurrence       TaskRecurrence?
+  reminders        TaskReminder[]
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([projectId])
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model TaskAttachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String
+  color     String
+  createdAt DateTime  @default(now())
+  notes     NoteTag[]
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+}
+
+model TaskLabel {
+  id        String             @id @default(uuid())
+  userId    String
+  name      String
+  color     String
+  createdAt DateTime           @default(now())
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mappings  TaskLabelMapping[]
+
+  @@unique([userId, name])
+}
+
+model TaskLabelMapping {
+  taskId  String
+  labelId String
+  label   TaskLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  task    Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+}
+
+model TaskReminder {
+  id        String   @id @default(uuid())
+  taskId    String
+  remindAt  DateTime
+  isSent    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskDependency {
+  taskId      String
+  dependsOnId String
+  dependsOn   Task   @relation("TaskIsDependentOn", fields: [dependsOnId], references: [id], onDelete: Cascade)
+  task        Task   @relation("TaskDependsOn", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, dependsOnId])
+}
+
+model TaskHistory {
+  id         String   @id @default(uuid())
+  taskId     String
+  userId     String
+  changeType String
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime @default(now())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TaskActivity {
+  id          String   @id @default(uuid())
+  taskId      String
+  userId      String
+  description String
+  createdAt   DateTime @default(now())
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TaskCustomField {
+  id     String          @id @default(uuid())
+  taskId String
+  name   String
+  value  String
+  type   CustomFieldType @default(TEXT)
+  task   Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskChecklist {
+  id        String              @id @default(uuid())
+  taskId    String
+  title     String
+  createdAt DateTime            @default(now())
+  task      Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  items     TaskChecklistItem[]
+}
+
+model TaskChecklistItem {
+  id          String        @id @default(uuid())
+  checklistId String
+  title       String
+  isCompleted Boolean       @default(false)
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  checklist   TaskChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+}
+
+model TaskRecurrence {
+  id         String              @id @default(uuid())
+  taskId     String              @unique
+  frequency  RecurrenceFrequency
+  interval   Int                 @default(1)
+  dayOfWeek  String?
+  dayOfMonth Int?
+  task       Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  parent    Folder?  @relation("SubFolders", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[] @relation("SubFolders")
+  notes     Note[]
+
+  @@index([userId])
+}
+
+model Notebook {
+  id          String      @id @default(uuid())
+  userId      String
+  title       String
+  color       String      @default("#8B5CF6")
+  icon        String      @default("book")
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  flashcards        Flashcard[]
+  notes             Note[]
+  user              User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizzes           Quiz[]
+  sharedPermissions SharedNotebookPermission[]
+  studyGroupId      String?
+  studyGroup        StudyGroup?                @relation(fields: [studyGroupId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([studyGroupId])
+}
+
+model Note {
+  id              String             @id @default(uuid())
+  userId          String
+  folderId        String?
+  notebookId      String?
+  title           String
+  content         String
+  autoSaveContent String?
+  markdown        String?
+  summary         String?
+  isShared        Boolean            @default(false)
+  isPinned        Boolean            @default(false)
+  isFavorite      Boolean            @default(false)
+  favorite        Boolean            @default(false)
+  inTrash         Boolean            @default(false)
+  archived        Boolean            @default(false)
+  deleted         Boolean            @default(false)
+  wordCount       Int                @default(0)
+  readingTime     Int                @default(0)
+  aiGenerated     Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  flashcards      Flashcard[]
+  folder          Folder?            @relation(fields: [folderId], references: [id])
+  notebook        Notebook?          @relation(fields: [notebookId], references: [id])
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collaborators   NoteCollaborator[]
+  comments        NoteComment[]
+  tags            NoteTag[]
+  versions        NoteVersion[]
+  quizzes         Quiz[]
+
+  @@index([userId])
+  @@index([notebookId])
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}
+
+model NoteVersion {
+  id          String   @id @default(uuid())
+  noteId      String
+  content     String
+  updatedById String
+  createdAt   DateTime @default(now())
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  updatedBy   User     @relation(fields: [updatedById], references: [id], onDelete: Cascade)
+}
+
+model NoteComment {
+  id               String        @id @default(uuid())
+  noteId           String
+  userId           String
+  content          String
+  parentId         String?
+  resolved         Boolean       @default(false)
+  resolvedByUserId String?
+  highlightStart   Int?
+  highlightEnd     Int?
+  highlightText    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  note             Note          @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  parent           NoteComment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          NoteComment[] @relation("CommentThread")
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resolvedByUser   User?         @relation("ResolvedComments", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+}
+
+model NoteCollaborator {
+  noteId    String
+  userId    String
+  role      CollabRole @default(READ)
+  createdAt DateTime   @default(now())
+  note      Note       @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, userId])
+}
+
+model Document {
+  id        String           @id @default(uuid())
+  userId    String
+  name      String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  summary   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vectors   DocumentVector[]
+
+  @@index([userId])
+}
+
+model DocumentVector {
+  id           String   @id @default(uuid())
+  documentId   String
+  contentChunk String
+  pageNumber   Int      @default(1)
+  chunkIndex   Int      @default(0)
+  embedding    Float[]
+  createdAt    DateTime @default(now())
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model FlashcardDeck {
+  id          String          @id @default(uuid())
+  userId      String
+  subjectId   String?
+  name        String
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  flashcards  Flashcard[]
+  subject     Subject?        @relation(fields: [subjectId], references: [id])
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stats       FlashcardStat[]
+
+  @@index([userId])
+}
+
+model Flashcard {
+  id          String             @id @default(uuid())
+  userId      String
+  deckId      String?
+  noteId      String?
+  notebookId  String?
+  front       String?
+  back        String?
+  question    String
+  answer      String
+  hint        String?
+  explanation String?
+  difficulty  String             @default("medium")
+  tags        String[]
+  aiGenerated Boolean            @default(false)
+  isFavorite  Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  deck        FlashcardDeck?     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  note        Note?              @relation(fields: [noteId], references: [id])
+  notebook    Notebook?          @relation(fields: [notebookId], references: [id])
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews     Review[]
+  spacedRep   SpacedRepetition[]
+
+  @@index([userId])
+  @@index([noteId])
+  @@index([notebookId])
+  @@index([deckId])
+}
+
+model SpacedRepetition {
+  id           String    @id @default(uuid())
+  flashcardId  String
+  userId       String
+  easeFactor   Float     @default(2.5)
+  intervalDays Int       @default(0)
+  repetitions  Int       @default(0)
+  nextReview   DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  flashcard    Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, flashcardId])
+  @@index([userId, nextReview])
+}
+
+model Review {
+  id           String    @id @default(uuid())
+  flashcardId  String
+  rating       Int
+  interval     Int
+  repetitions  Int
+  easeFactor   Float
+  nextReview   DateTime
+  lastReviewed DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  flashcard    Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  @@index([flashcardId])
+}
+
+model FlashcardStat {
+  id            String        @id @default(uuid())
+  userId        String
+  deckId        String
+  cardsReviewed Int
+  correctCount  Int
+  date          DateTime      @default(dbgenerated("CURRENT_DATE"))
+  createdAt     DateTime      @default(now())
+  deck          FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id            String     @id @default(uuid())
+  title         String
+  description   String?
+  userId        String
+  subjectId     String?
+  notebookId    String?
+  noteId        String?
+  difficulty    Difficulty @default(MEDIUM)
+  questionCount Int
+  estimatedTime Int
+  aiGenerated   Boolean    @default(false)
+  status        QuizStatus @default(PUBLISHED)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  attempts      Attempt[]
+  questions     Question[]
+  note          Note?      @relation(fields: [noteId], references: [id])
+  notebook      Notebook?  @relation(fields: [notebookId], references: [id])
+  subject       Subject?   @relation(fields: [subjectId], references: [id])
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Question {
+  id             String          @id @default(uuid())
+  quizId         String
+  type           QuestionType    @default(MCQ)
+  question       String
+  explanation    String?
+  difficulty     Difficulty      @default(MEDIUM)
+  order          Int
+  attemptAnswers AttemptAnswer[]
+  choices        Choice[]
+  quiz           Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
+}
+
+model Choice {
+  id             String          @id @default(uuid())
+  questionId     String
+  text           String
+  isCorrect      Boolean         @default(false)
+  attemptAnswers AttemptAnswer[]
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model Attempt {
+  id          String          @id @default(uuid())
+  quizId      String
+  userId      String
+  startedAt   DateTime        @default(now())
+  completedAt DateTime?
+  score       Int             @default(0)
+  percentage  Float           @default(0.0)
+  duration    Int             @default(0)
+  quiz        Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers     AttemptAnswer[]
+
+  @@index([userId, quizId])
+}
+
+model AttemptAnswer {
+  id               String   @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedChoiceId String?
+  isCorrect        Boolean  @default(false)
+  attempt          Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question         Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedChoice   Choice?  @relation(fields: [selectedChoiceId], references: [id])
+}
+
+model ChatConversation {
+  id        String        @id @default(uuid())
+  userId    String
+  title     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id             String           @id @default(uuid())
+  conversationId String
+  role           ChatRole
+  content        String
+  createdAt      DateTime         @default(now())
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Habit {
+  id          String         @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  frequency   HabitFrequency @default(DAILY)
+  targetValue Float?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs        HabitLog[]
+  streak      HabitStreak?
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id          String   @id @default(uuid())
+  habitId     String
+  date        DateTime @default(dbgenerated("CURRENT_DATE"))
+  isCompleted Boolean  @default(false)
+  value       Float?
+  createdAt   DateTime @default(now())
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+}
+
+model HabitStreak {
+  id            String   @id @default(uuid())
+  habitId       String   @unique
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+}
+
+model PomodoroSession {
+  id              String   @id @default(uuid())
+  userId          String
+  taskId          String?
+  durationMinutes Int
+  completed       Boolean  @default(true)
+  soundUsed       String?
+  createdAt       DateTime @default(now())
+  task            Task?    @relation(fields: [taskId], references: [id])
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Goal {
+  id          String          @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  targetDate  DateTime
+  type        GoalType        @default(SEMESTER)
+  isCompleted Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestones  GoalMilestone[]
+
+  @@index([userId])
+}
+
+model GoalMilestone {
+  id          String   @id @default(uuid())
+  goalId      String
+  title       String
+  isCompleted Boolean  @default(false)
+  order       Int
+  createdAt   DateTime @default(now())
+  goal        Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+}
+
+model StudyGroup {
+  id          String              @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  invitations      GroupInvitation[]
+  owner            User                @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members          StudyGroupMember[]
+  messages         StudyGroupMessage[]
+  groupInvites     GroupInvite[]
+  announcements    GroupAnnouncement[]
+  resources        GroupResource[]
+  challenges       GroupChallenge[]
+  sharedNotebooks  Notebook[]
+}
+
+model StudyGroupMember {
+  studyGroupId String
+  userId       String
+  role         String     @default("MEMBER")
+  joinedAt     DateTime   @default(now())
+  group        StudyGroup @relation(fields: [studyGroupId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([studyGroupId, userId])
+}
+
+model StudyGroupMessage {
+  id           String     @id @default(uuid())
+  studyGroupId String
+  userId       String
+  content      String
+  createdAt    DateTime   @default(now())
+  group        StudyGroup @relation(fields: [studyGroupId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  isEnabled   Boolean  @default(false)
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model NotificationPreference {
+  id     String  @id @default(uuid())
+  userId String  @unique
+  email  Boolean @default(true)
+  inApp  Boolean @default(true)
+  push   Boolean @default(false)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AiUsageLog {
+  id           String   @id @default(uuid())
+  userId       String
+  provider     String
+  promptType   String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  latencyMs    Int      @default(0)
+  costEst      Float    @default(0.0)
+  success      Boolean  @default(true)
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PromptTemplate {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  category    String
+  template    String
+  version     Int      @default(1)
+  description String?
+  variables   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AvailabilitySchedule {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  workingHours    Json
+  studyHours      Json
+  sleepStart      String   @default("23:00")
+  sleepEnd        String   @default("07:00")
+  timezone        String   @default("UTC")
+  excludeWeekends Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GroupInvitation {
+  id           String     @id @default(uuid())
+  studyGroupId String
+  email        String
+  role         String     @default("MEMBER")
+  token        String     @unique
+  expiresAt    DateTime
+  createdAt    DateTime   @default(now())
+  group        StudyGroup @relation(fields: [studyGroupId], references: [id], onDelete: Cascade)
+}
+
+model StudyMetric {
+  id             String   @id @default(uuid())
+  userId         String
+  date           DateTime
+  studyMinutes   Int      @default(0)
+  completedTasks Int      @default(0)
+  quizScoresAvg  Float    @default(0.0)
+  focusSessions  Int      @default(0)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum LearningStyle {
+  VISUAL
+  AUDITORY
+  READING
+  KINESTHETIC
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum NotifyMethod {
+  EMAIL
+  PUSH
+  IN_APP
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  BOOLEAN
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum CollabRole {
+  READ
+  WRITE
+  VIEWER
+  COMMENTER
+  EDITOR
+  OWNER
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+}
+
+enum GoalType {
+  WEEKLY
+  SEMESTER
+  LONG_TERM
+}
+
+model UserAchievement {
+  id            String    @id @default(uuid())
+  userId        String
+  achievementId String
+  progress      Int       @default(0)
+  target        Int
+  unlocked      Boolean   @default(false)
+  unlockedAt    DateTime?
+  acknowledged  Boolean   @default(false)
+  xpGranted     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model XpLog {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Int
+  source      String
+  description String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model SubjectXp {
+  id        String   @id @default(uuid())
+  userId    String
+  subject   String
+  xp        Int      @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, subject])
+  @@index([userId])
+}
+
+model LeaderboardArchive {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  period     String
+  xp         Int
+  studyHours Float
+  rank       Int      @default(1)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type, period])
+}
+
+model Season {
+  id        String   @id @default(uuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+  user      User     @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
+
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     String   @default("PENDING") // "PENDING", "ACCEPTED", "REJECTED"
+  createdAt  DateTime @default(now())
+  sender     User     @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("BlockedUsers", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("BlockedByUsers", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model GroupInvite {
+  id           String     @id @default(uuid())
+  studyGroupId String
+  inviterId    String
+  inviteeId    String
+  status       String     @default("PENDING") // "PENDING", "ACCEPTED", "REJECTED"
+  createdAt    DateTime   @default(now())
+  group        StudyGroup @relation(fields: [studyGroupId], references: [id], onDelete: Cascade)
+  inviter      User       @relation("SentGroupInvites", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee      User       @relation("ReceivedGroupInvites", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([studyGroupId, inviteeId])
+  @@index([studyGroupId])
+  @@index([inviteeId])
+}
+
+model GroupAnnouncement {
+  id           String     @id @default(uuid())
+  studyGroupId String
+  authorId     String
+  title        String
+  content      String
+  createdAt    DateTime   @default(now())
+  group        StudyGroup @relation(fields: [studyGroupId], references: [id], onDelete: Cascade)
+  author       User       @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([studyGroupId])
+}
+
+model GroupResource {
+  id           String     @id @default(uuid())
+  studyGroupId String
+  resourceType String     // "NOTE", "FLASHCARD_DECK", "QUIZ", "TASK", "CALENDAR_EVENT"
+  resourceId   String
+  sharedById   String
+  createdAt    DateTime   @default(now())
+  group        StudyGroup @relation(fields: [studyGroupId], references: [id], onDelete: Cascade)
+  sharedBy     User       @relation("SharedBy", fields: [sharedById], references: [id], onDelete: Cascade)
+
+  @@unique([studyGroupId, resourceType, resourceId])
+  @@index([studyGroupId])
+}
+
+model GroupChallenge {
+  id           String              @id @default(uuid())
+  studyGroupId String
+  title        String
+  description  String?
+  type         String              // "STUDY_HOURS", "FLASHCARDS", "NOTES", "QUIZZES"
+  target       Float
+  period       String              // "WEEKLY", "MONTHLY"
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime            @default(now())
+  group        StudyGroup          @relation(fields: [studyGroupId], references: [id], onDelete: Cascade)
+  progress     ChallengeProgress[]
+
+  @@index([studyGroupId])
+}
+
+model ChallengeProgress {
+  id          String         @id @default(uuid())
+  challengeId String
+  userId      String
+  current     Float          @default(0.0)
+  completed   Boolean        @default(false)
+  updatedAt   DateTime       @updatedAt
+  challenge   GroupChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([challengeId])
+  @@index([userId])
+}
+
+model SharedNotebookPermission {
+  id         String   @id @default(uuid())
+  notebookId String
+  userId     String
+  role       String   // "VIEWER", "COMMENTER", "EDITOR", "OWNER"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  notebook   Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notebookId, userId])
+  @@index([notebookId])
+  @@index([userId])
+}

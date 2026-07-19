@@ -1,0 +1,29 @@
+{
+  "name": "studysync-ai",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "npm@11.12.1",
+
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=11.12.1"
+  },
+
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+
+  "devDependencies": {
+    "turbo": "^2.10.2",
+    "typescript": "^5.4.5"
+  }
+}
