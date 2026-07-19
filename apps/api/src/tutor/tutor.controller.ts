@@ -4,38 +4,52 @@ import {
   Post,
   Delete,
   Patch,
-  Sse,
   UseGuards,
   Param,
-  Query,
   Body,
-  MessageEvent,
+  Res,
+  Req,
   BadRequestException,
 } from '@nestjs/common';
 import { TutorService } from './tutor.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Observable, map } from 'rxjs';
+import { ChatPromptDto } from './dto/chat-prompt.dto';
+import { RenameChatDto } from './dto/rename-chat.dto';
+import * as express from 'express';
+import { Subject } from 'rxjs';
 
 @Controller('tutor')
 @UseGuards(JwtAuthGuard)
 export class TutorController {
   constructor(private tutorService: TutorService) {}
 
-  @Get('conversations')
+  @Post('chat')
+  async chat(
+    @CurrentUser() user: any,
+    @Body() dto: ChatPromptDto,
+    @Res() res: express.Response,
+    @Req() req: express.Request,
+  ) {
+    const clientDisconnected$ = new Subject<void>();
+    req.on('close', () => {
+      clientDisconnected$.next();
+      clientDisconnected$.complete();
+    });
+    return this.tutorService.streamTutorResponse(
+      user.id,
+      dto,
+      res,
+      clientDisconnected$,
+    );
+  }
+
+  @Get('history')
   async listConversations(@CurrentUser() user: any) {
     return this.tutorService.listConversations(user.id);
   }
 
-  @Post('conversations')
-  async createConversation(
-    @CurrentUser() user: any,
-    @Body('title') title?: string,
-  ) {
-    return this.tutorService.createConversation(user.id, title);
-  }
-
-  @Get('conversations/:id')
+  @Get('history/:id')
   async getConversationDetails(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -43,42 +57,46 @@ export class TutorController {
     return this.tutorService.getConversationDetails(user.id, id);
   }
 
-  @Delete('conversations/:id')
+  @Delete('history/:id')
   async deleteConversation(@CurrentUser() user: any, @Param('id') id: string) {
     return this.tutorService.deleteConversation(user.id, id);
   }
 
-  @Patch('conversations/:id')
+  @Patch('history/:id')
   async renameConversation(
     @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body('title') title: string,
+    @Body() dto: RenameChatDto,
   ) {
-    if (!title || !title.trim()) {
-      throw new BadRequestException('Title cannot be empty');
-    }
-    return this.tutorService.renameConversation(user.id, id, title);
+    return this.tutorService.renameConversation(user.id, id, dto.title);
   }
 
-  @Sse('conversations/:id/stream')
-  async streamTutor(
+  @Post('regenerate')
+  async regenerate(
     @CurrentUser() user: any,
-    @Param('id') conversationId: string,
-    @Query('prompt') prompt: string,
-    @Query('noteId') noteId?: string,
-    @Query('notebookId') notebookId?: string,
-    @Query('mode') mode?: string,
-  ): Promise<Observable<MessageEvent>> {
-    const stream$ = await this.tutorService.streamTutorResponse(
-      user.id,
-      conversationId,
-      prompt,
-      {
-        noteId,
-        notebookId,
-        mode,
-      },
-    );
-    return stream$.pipe(map((chunk) => ({ data: chunk })));
+    @Body('conversationId') conversationId: string,
+    @Res() res: express.Response,
+    @Req() req: express.Request,
+  ) {
+    if (!conversationId) {
+      throw new BadRequestException('Conversation ID is required');
+    }
+    const clientDisconnected$ = new Subject<void>();
+    req.on('close', () => {
+      clientDisconnected$.next();
+      clientDisconnected$.complete();
+    });
+    return this.tutorService.regenerateResponse(user.id, conversationId, res);
+  }
+
+  @Post('stop')
+  stop(
+    @CurrentUser() user: any,
+    @Body('conversationId') conversationId: string,
+  ) {
+    if (!conversationId) {
+      throw new BadRequestException('Conversation ID is required');
+    }
+    return this.tutorService.stopActiveStream(user.id, conversationId);
   }
 }

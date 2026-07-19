@@ -2,11 +2,18 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const users = await prisma.user.findMany({
-    take: 10,
-    include: { profile: true },
+  const conversations = await prisma.tutorConversation.findMany({
+    take: 5,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      messages: {
+        include: {
+          responses: true,
+        },
+      },
+    },
   });
-  console.log("Result:", JSON.stringify(users, null, 2));
+  console.log("Result:", JSON.stringify(conversations, null, 2));
 }
 
 main()

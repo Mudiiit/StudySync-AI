@@ -73,6 +73,7 @@ model User {
   taskLabels             TaskLabel[]
   taskWorkspaces         TaskWorkspace[]
   verificationTokens     VerificationToken[]
+  tutorConversations     TutorConversation[]
 
   @@index([email])
 }
@@ -1392,4 +1393,48 @@ model SharedNotebookPermission {
   @@unique([notebookId, userId])
   @@index([notebookId])
   @@index([userId])
+}
+
+model TutorConversation {
+  id        String         @id @default(uuid())
+  userId    String
+  title     String
+  model     String         @default("gemini-2.5-flash")
+  deleted   Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  TutorMessage[]
+
+  @@index([userId])
+  @@index([deleted])
+}
+
+model TutorMessage {
+  id             String                 @id @default(uuid())
+  conversationId String
+  role           String                 // "user" | "assistant" | "system"
+  content        String
+  deleted        Boolean                @default(false)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  conversation   TutorConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  responses      TutorAssistantResponse[]
+
+  @@index([conversationId])
+  @@index([deleted])
+}
+
+model TutorAssistantResponse {
+  id              String       @id @default(uuid())
+  messageId       String
+  modelUsed       String
+  promptTokens    Int?
+  completionTokens Int?
+  latencyMs       Int?
+  feedback        String?      // e.g. "thumbs_up" / "thumbs_down"
+  createdAt       DateTime     @default(now())
+  message         TutorMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }
