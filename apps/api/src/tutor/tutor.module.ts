@@ -4,9 +4,10 @@ import { TutorService } from './tutor.service';
 import { TutorPromptBuilder } from './services/tutor-prompt.builder';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AiModule } from '../ai/ai.module';
+import { KnowledgeModule } from '../knowledge/knowledge.module';
 
 @Module({
-  imports: [PrismaModule, AiModule],
+  imports: [PrismaModule, AiModule, KnowledgeModule],
   controllers: [TutorController],
   providers: [TutorService, TutorPromptBuilder],
   exports: [TutorService],

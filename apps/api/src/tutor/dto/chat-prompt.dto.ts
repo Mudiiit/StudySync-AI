@@ -24,4 +24,7 @@ export class ChatPromptDto {
   @IsString()
   @IsOptional()
   model?: string;
+
+  @IsOptional()
+  documentIds?: string[];
 }

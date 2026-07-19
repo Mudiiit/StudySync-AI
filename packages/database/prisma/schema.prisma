@@ -74,6 +74,8 @@ model User {
   taskWorkspaces         TaskWorkspace[]
   verificationTokens     VerificationToken[]
   tutorConversations     TutorConversation[]
+  documentCollections    DocumentCollection[]
+  userMemory             UserMemory?
 
   @@index([email])
 }
@@ -673,19 +675,24 @@ model NoteCollaborator {
 }
 
 model Document {
-  id        String           @id @default(uuid())
-  userId    String
-  name      String
-  fileUrl   String
-  fileSize  Int
-  mimeType  String
-  summary   String?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vectors   DocumentVector[]
+  id           String              @id @default(uuid())
+  userId       String
+  name         String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  summary      String?
+  tags         String[]            @default([])
+  metadata     Json?
+  collectionId String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection   DocumentCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  vectors      DocumentVector[]
 
   @@index([userId])
+  @@index([collectionId])
 }
 
 model DocumentVector {
@@ -695,6 +702,7 @@ model DocumentVector {
   pageNumber   Int      @default(1)
   chunkIndex   Int      @default(0)
   embedding    Float[]
+  metadata     Json?
   createdAt    DateTime @default(now())
   document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }
@@ -1437,4 +1445,31 @@ model TutorAssistantResponse {
   message         TutorMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
+}
+
+model DocumentCollection {
+  id          String     @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents   Document[]
+
+  @@index([userId])
+}
+
+model UserMemory {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  weakTopics           String[] @default([])
+  strongTopics         String[] @default([])
+  learningStyle        String   @default("standard")
+  preferredExplanation String   @default("standard")
+  goals                String[] @default([])
+  metadata             Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

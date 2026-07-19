@@ -154,9 +154,21 @@ export default function TutorPage() {
   const [attachedNotebookId, setAttachedNotebookId] = useState<string | null>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
+  // RAG States
+  const [attachedDocIds, setAttachedDocIds] = useState<string[]>([]);
+  const [userDocuments, setUserDocuments] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeCitations, setActiveCitations] = useState<any[] | null>(null);
+  const [selectedCitations, setSelectedCitations] = useState<any[]>([]);
+  const [showCitationsDrawer, setShowCitationsDrawer] = useState(false);
+  const [citationsMap, setCitationsMap] = useState<{ [msgId: string]: any[] }>({});
+
   // Popover selectors
   const [showNoteSelector, setShowNoteSelector] = useState(false);
   const [showNotebookSelector, setShowNotebookSelector] = useState(false);
+  const [showDocSelector, setShowDocSelector] = useState(false);
 
   // Streaming and control states
   const [streamingText, setStreamingText] = useState('');
@@ -240,6 +252,104 @@ export default function TutorPage() {
     }
   };
 
+  const handleUploadDocument = async (file: File) => {
+    if (isUploading) return;
+    setIsUploading(true);
+    setUploadProgressText(`Uploading ${file.name}...`);
+    
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
+      const token = localStorage.getItem('accessToken');
+      
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${apiBase}/knowledge/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || 'Upload failed');
+      }
+
+      const data = await res.json();
+      showToast(`${file.name} uploaded successfully. Indexing started...`, 'success');
+      pollDocumentStatus(data.documentId, file.name);
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.message || 'Failed to upload document', 'error');
+      setIsUploading(false);
+    }
+  };
+
+  const pollDocumentStatus = async (docId: string, name: string) => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
+    const token = localStorage.getItem('accessToken');
+    
+    setUploadProgressText(`Indexing ${name}...`);
+    let attempts = 0;
+    
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await fetch(`${apiBase}/rag/documents`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          const docs = await res.json();
+          const target = docs.find((d: any) => d.id === docId);
+          if (target && target.status === 'indexed') {
+            clearInterval(interval);
+            showToast(`${name} is now fully indexed and ready for Q&A!`, 'success');
+            setAttachedDocIds((prev) => [...prev, docId]);
+            setIsUploading(false);
+            fetchUserDocuments();
+            return;
+          }
+        }
+      } catch (e) {}
+
+      if (attempts > 30) {
+        clearInterval(interval);
+        showToast(`Indexing ${name} took too long. It will continue in the background.`, 'info');
+        setIsUploading(false);
+        fetchUserDocuments();
+      }
+    }, 2000);
+  };
+
+  const fetchUserDocuments = async () => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${apiBase}/rag/documents`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const docs = await res.json();
+        setUserDocuments(docs);
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchUserDocuments();
+  }, []);
+
+  const handleOpenCitations = (msgCitations: any[]) => {
+    setSelectedCitations(msgCitations);
+    setShowCitationsDrawer(true);
+  };
+
   // Main prompt stream trigger
   const handleSendPrompt = async (textToSend: string, isRetry = false) => {
     if (!textToSend.trim() || isStreaming) return;
@@ -263,9 +373,9 @@ export default function TutorPage() {
         noteId: attachedNoteId || undefined,
         notebookId: attachedNotebookId || undefined,
         model: selectedModel,
+        documentIds: attachedDocIds.length > 0 ? attachedDocIds : undefined,
       };
 
-      // Optimistic user bubble insertion
       if (activeConv?.messages) {
         activeConv.messages.push({
           id: 'optimistic-user-msg',
@@ -314,8 +424,13 @@ export default function TutorPage() {
               resolvedConvId = convId;
               setActiveConversationId(convId);
             } else if (dataStr.startsWith('[TITLE]:')) {
-              // Title auto-generated
               refetchConvs();
+            } else if (dataStr.startsWith('[CITATIONS]:')) {
+              const citationJson = dataStr.substring(12).trim();
+              try {
+                const parsedCitations = JSON.parse(citationJson);
+                setActiveCitations(parsedCitations);
+              } catch (e) {}
             } else {
               setStreamingText((prev) => prev + line.substring(6));
             }
@@ -323,10 +438,22 @@ export default function TutorPage() {
         }
       }
 
-      // Finish streaming, sync state
-      await refetchDetails();
+      const details = await refetchDetails();
       await refetchConvs();
+
+      const updatedMessages = details.data?.messages || [];
+      const assistantMsgs = updatedMessages.filter((m: any) => m.role === 'assistant');
+      if (assistantMsgs.length > 0 && activeCitations) {
+        const lastMsg = assistantMsgs[assistantMsgs.length - 1];
+        setCitationsMap((prev) => ({
+          ...prev,
+          [lastMsg.id]: activeCitations,
+        }));
+      }
+
+      setActiveCitations(null);
       setAttachedFile(null);
+      setAttachedDocIds([]);
     } catch (err: any) {
       if (err.name === 'AbortError') {
         showToast('Generation cancelled', 'info');
@@ -788,7 +915,16 @@ export default function TutorPage() {
                           )}
                         </button>
 
-                        {/* If it is the last message in conversation, show regenerate */}
+                        {citationsMap[m.id] && citationsMap[m.id].length > 0 && (
+                          <button
+                            onClick={() => handleOpenCitations(citationsMap[m.id])}
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-violet-450 hover:text-violet-350 transition uppercase cursor-pointer ml-3"
+                          >
+                            <BookOpen className="h-3 w-3 text-violet-400" />
+                            <span>View Sources ({citationsMap[m.id].length})</span>
+                          </button>
+                        )}
+
                         {activeConv?.messages && activeConv.messages[activeConv.messages.length - 1]?.id === m.id && !isStreaming && (
                           <button
                             onClick={handleRegenerate}
@@ -981,9 +1117,27 @@ export default function TutorPage() {
         {/* 3. BOTTOM COMPOSER AND CONTEXT ROWS */}
         <div className="p-5 border-t border-zinc-900 bg-zinc-950/20 backdrop-blur-md shrink-0 relative z-10">
           <div className="max-w-3xl mx-auto">
-            {/* Active Attachments Status Row */}
-            {(attachedNoteId || attachedNotebookId || attachedFile) && (
+            {/* Active Attachments Status Ro            {(attachedNoteId || attachedNotebookId || attachedFile || attachedDocIds.length > 0 || isUploading) && (
               <div className="flex flex-wrap gap-2 mb-3">
+                {isUploading && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-lg shadow-sm animate-pulse">
+                    <RefreshCw className="h-3 w-3 animate-spin text-violet-400" />
+                    <span>{uploadProgressText}</span>
+                  </div>
+                )}
+                {attachedDocIds.length > 0 && (
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.15 }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-lg shadow-sm"
+                  >
+                    <span>Materials: {attachedDocIds.length} Attached</span>
+                    <button onClick={() => setAttachedDocIds([])} className="hover:text-zinc-200 transition cursor-pointer">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </motion.div>
+                )}
                 {attachedNotebookId && (
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
@@ -1049,6 +1203,7 @@ export default function TutorPage() {
                       onClick={() => {
                         setShowNoteSelector(!showNoteSelector);
                         setShowNotebookSelector(false);
+                        setShowDocSelector(false);
                       }}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-semibold tracking-wide transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 ${
                         attachedNoteId
@@ -1100,6 +1255,7 @@ export default function TutorPage() {
                       onClick={() => {
                         setShowNotebookSelector(!showNotebookSelector);
                         setShowNoteSelector(false);
+                        setShowDocSelector(false);
                       }}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-semibold tracking-wide transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 ${
                         attachedNotebookId
@@ -1144,6 +1300,74 @@ export default function TutorPage() {
                     </AnimatePresence>
                   </div>
 
+                  {/* Materials Trigger */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDocSelector(!showDocSelector);
+                        setShowNoteSelector(false);
+                        setShowNotebookSelector(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-semibold tracking-wide transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20 ${
+                        attachedDocIds.length > 0
+                          ? 'border-violet-500 bg-violet-500/15 text-violet-400'
+                          : 'border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <BookOpen className="h-3.5 w-3.5" />
+                      <span>Materials ({attachedDocIds.length})</span>
+                    </button>
+                    <AnimatePresence>
+                      {showDocSelector && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 8 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full mb-3 left-0 w-64 bg-zinc-950 border border-zinc-850 rounded-2xl shadow-xl z-30 max-h-56 overflow-y-auto p-1.5 divide-y divide-zinc-900"
+                        >
+                          <div className="px-3 py-2 text-[9px] font-bold text-zinc-550 uppercase tracking-widest flex items-center justify-between">
+                            <span>Select Study Documents</span>
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="text-[9px] text-violet-400 hover:text-violet-300 font-bold uppercase tracking-wider cursor-pointer"
+                            >
+                              Upload New
+                            </button>
+                          </div>
+                          {userDocuments && userDocuments.length > 0 ? (
+                            userDocuments.map((d: any) => {
+                              const isAttached = attachedDocIds.includes(d.id);
+                              return (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isAttached) {
+                                      setAttachedDocIds((prev) => prev.filter((id) => id !== d.id));
+                                    } else {
+                                      setAttachedDocIds((prev) => [...prev, d.id]);
+                                    }
+                                  }}
+                                  className={`w-full text-left px-3 py-2.5 text-xs rounded-xl flex items-center justify-between transition-all cursor-pointer ${
+                                    isAttached ? 'bg-violet-500/10 text-violet-350 font-semibold' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+                                  }`}
+                                >
+                                  <span className="truncate pr-2">{d.name}</span>
+                                  {isAttached && <Check className="h-3.5 w-3.5 text-violet-450 shrink-0" />}
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="px-3 py-2 text-xs text-zinc-650 italic">No indexed documents yet</div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
                   {/* File Trigger */}
                   <div>
                     <input
@@ -1151,8 +1375,7 @@ export default function TutorPage() {
                       ref={fileInputRef}
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
-                          setAttachedFile(e.target.files[0]);
-                          showToast('Document context attached', 'success');
+                          handleUploadDocument(e.target.files[0]);
                         }
                       }}
                       className="hidden"
@@ -1198,7 +1421,7 @@ export default function TutorPage() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleSendPrompt(promptInput)}
                     disabled={isStreaming || !promptInput.trim()}
-                    className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-violet-900/20 transition-all disabled:opacity-45 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                    className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-violet-900/20 transition-all disabled:opacity-45 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
                   >
                     <span>Send</span>
                     <Send className="h-3.5 w-3.5" />
@@ -1209,6 +1432,84 @@ export default function TutorPage() {
           </div>
         </div>
       </div>
+
+      {/* Citations Side Drawer */}
+      <AnimatePresence>
+        {showCitationsDrawer && selectedCitations && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCitationsDrawer(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs z-40 cursor-pointer"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute top-0 right-0 h-full w-96 bg-[#0b0b0d] border-l border-zinc-900 shadow-2xl z-50 flex flex-col p-6 overflow-hidden select-text"
+            >
+              <div className="flex items-center justify-between border-b border-zinc-900 pb-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-violet-400" />
+                  <h3 className="font-extrabold text-sm text-zinc-155 tracking-tight">Source Citations</h3>
+                </div>
+                <button
+                  onClick={() => setShowCitationsDrawer(false)}
+                  className="p-1.5 hover:bg-zinc-900 rounded-lg text-zinc-550 hover:text-zinc-300 cursor-pointer"
+                >
+                  <X className="h-4.5 w-4.5" />
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-y-auto space-y-4 pr-1 scrollbar-thin">
+                {selectedCitations.map((cit, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 bg-zinc-900/40 border border-zinc-850/50 rounded-2xl space-y-2.5 relative overflow-hidden group hover:border-zinc-800 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-violet-400" />
+                        <span className="text-xs font-bold text-zinc-200 truncate max-w-[200px]">{cit.documentName}</span>
+                      </div>
+                      <span className="px-2 py-0.5 bg-zinc-950 border border-zinc-850/60 rounded-md text-[9px] font-bold text-zinc-400">
+                        Page {cit.pageNumber}
+                      </span>
+                    </div>
+
+                    <p className="text-[11.5px] text-zinc-400 leading-relaxed italic bg-zinc-950/30 p-2.5 border border-zinc-900 rounded-xl select-text">
+                      "{cit.content}"
+                    </p>
+
+                    <div className="flex items-center justify-between text-[10px] text-zinc-550 pt-1">
+                      <span>Relevance Score</span>
+                      <span className="font-bold text-violet-400">{Math.round(cit.score * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-zinc-950 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-violet-600 to-indigo-650 h-full rounded-full"
+                        style={{ width: `${cit.score * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Drag & Drop Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-violet-950/20 backdrop-blur-sm border-2 border-dashed border-violet-500 rounded-3xl z-55 flex flex-col items-center justify-center pointer-events-none animate-fade-in">
+          <Brain className="h-16 w-16 text-violet-450 animate-bounce mb-4" />
+          <h3 className="text-xl font-bold text-zinc-150">Drop your study files here to index</h3>
+          <p className="text-xs text-zinc-550 mt-2">Supports PDF, DOCX, PPTX, TXT, Markdown, and source code</p>
+        </div>
+      )}
     </div>
   );
 }

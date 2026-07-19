@@ -22,6 +22,7 @@ import { FlashcardsModule } from './flashcards/flashcards.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { TutorModule } from './tutor/tutor.module';
 import { SocialModule } from './social/social.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
 
 import { HealthController } from './health.controller';
 
@@ -50,6 +51,7 @@ import { HealthController } from './health.controller';
     QuizzesModule,
     TutorModule,
     SocialModule,
+    KnowledgeModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

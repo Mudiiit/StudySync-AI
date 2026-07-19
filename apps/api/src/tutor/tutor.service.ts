@@ -10,6 +10,9 @@ import { TutorPromptBuilder } from './services/tutor-prompt.builder';
 import { ChatPromptDto } from './dto/chat-prompt.dto';
 import * as express from 'express';
 import { Subscription } from 'rxjs';
+import { RetrievalService } from '../knowledge/services/retrieval.service';
+import { RerankingService } from '../knowledge/services/reranking.service';
+import { MemoryService } from '../knowledge/services/memory.service';
 
 @Injectable()
 export class TutorService {
@@ -29,6 +32,9 @@ export class TutorService {
     private prisma: PrismaService,
     private aiEngine: AiEngine,
     private promptBuilder: TutorPromptBuilder,
+    private retrievalService: RetrievalService,
+    private rerankingService: RerankingService,
+    private memoryService: MemoryService,
   ) {}
 
   async listConversations(userId: string) {
@@ -229,6 +235,57 @@ export class TutorService {
       dto.notebookId,
     );
 
+    // Retrieve cognitive memory context
+    let memoryContext = '';
+    try {
+      memoryContext = await this.memoryService.compileMemoryContext(userId);
+    } catch (e: any) {
+      this.logger.warn(`Failed compiling memory context: ${e.message}`);
+    }
+
+    // Perform hybrid RAG search if documentIds are attached
+    let documentCitationsText = '';
+    const citations: any[] = [];
+    if (dto.documentIds && dto.documentIds.length > 0) {
+      try {
+        const rawResults = await this.retrievalService.hybridSearch(
+          userId,
+          dto.prompt,
+          dto.documentIds,
+          undefined,
+          5,
+        );
+        const reranked = await this.rerankingService.rerankResults(
+          userId,
+          rawResults,
+        );
+
+        if (reranked.length > 0) {
+          const parts = reranked.map(
+            (r, idx) =>
+              `[Source ${idx + 1}] (File: ${r.documentName}, Page: ${r.pageNumber}):\n${r.content}`,
+          );
+          documentCitationsText = `RAG GROUNDED CITATIONS:\n${parts.join('\n\n')}`;
+
+          reranked.forEach((r) => {
+            citations.push({
+              documentName: r.documentName,
+              pageNumber: r.pageNumber,
+              content: r.content,
+              score: r.score,
+            });
+          });
+        }
+      } catch (e: any) {
+        this.logger.error(`Failed executing hybrid search: ${e.message}`);
+      }
+    }
+
+    // Write Citations to SSE before stream begins
+    if (citations.length > 0) {
+      res.write(`data: [CITATIONS]: ${JSON.stringify(citations)}\n\n`);
+    }
+
     // Retrieve conversation history
     const historyMessages = await this.prisma.tutorMessage.findMany({
       where: { conversationId, deleted: false },
@@ -241,9 +298,14 @@ export class TutorService {
     });
 
     const finalSystemInstruction = `${systemPrompt}
- 
+  
+STUDENT LEARNING STYLE PROFILE AND LONG-TERM MEMORY:
+${memoryContext || 'No profile established.'}
+
 STUDENT STUDY MATERIAL CONTEXT:
-${contextText || 'No specific note or notebook attached. Answer generally using standard tutoring best practices.'}
+${contextText || 'No specific note or notebook attached.'}
+
+${documentCitationsText ? `${documentCitationsText}\n` : ''}
  
 CHAT HISTORY:
 ${historyText || 'No previous messages.'}`;
