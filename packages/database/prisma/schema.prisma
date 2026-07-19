@@ -63,6 +63,16 @@ model User {
   challengeProgress      ChallengeProgress[]
   sharedNotebooks        SharedNotebookPermission[]
   studyMetrics           StudyMetric[]
+  studyPlans             StudyPlan[]
+  studySessions          StudySession[]
+  studyGoals             StudyGoal[]
+  studyMilestones        StudyMilestone[]
+  revisionSchedules      RevisionSchedule[]
+  studyConstraint        StudyConstraint?
+  focusProfile           FocusProfile?
+  learningRecommendations LearningRecommendation[]
+  productivityMetrics    ProductivityMetric[]
+  plannerSettings        PlannerSettings?
   studyPlanner           StudyPlanner?
   subjects               Subject[]
   tags                   Tag[]
@@ -1472,4 +1482,179 @@ model UserMemory {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudyPlan {
+  id             String         @id @default(uuid())
+  userId         String
+  title          String
+  description    String?
+  type           String         @default("DAILY")
+  startDate      DateTime
+  endDate        DateTime
+  status         String         @default("ACTIVE")
+  targetHours    Float          @default(0)
+  completedHours Float          @default(0)
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions       StudySession[]
+
+  @@index([userId, startDate])
+  @@index([type])
+}
+
+model StudySession {
+  id              String     @id @default(uuid())
+  planId          String?
+  userId          String
+  subject         String
+  topic           String
+  difficulty      String     @default("MEDIUM")
+  priority        String     @default("MEDIUM")
+  startTime       DateTime
+  endTime         DateTime
+  durationMins    Int        @default(60)
+  isCompleted     Boolean    @default(false)
+  breakRecommend  String?
+  requiredDocIds  String[]   @default([])
+  tutorMode       String     @default("standard")
+  suggestedQuizId String?
+  masteryGain     Float      @default(0.1)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan            StudyPlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startTime])
+  @@index([planId])
+}
+
+model StudyGoal {
+  id           String           @id @default(uuid())
+  userId       String
+  title        String
+  subject      String?
+  targetDate   DateTime
+  targetHours  Float            @default(10)
+  currentHours Float            @default(0)
+  status       String           @default("IN_PROGRESS")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestones   StudyMilestone[]
+
+  @@index([userId])
+}
+
+model StudyMilestone {
+  id             String    @id @default(uuid())
+  goalId         String
+  userId         String
+  title          String
+  weekNumber     Int       @default(1)
+  order          Int       @default(1)
+  isCompleted    Boolean   @default(false)
+  estimatedHours Float     @default(5)
+  topics         String[]  @default([])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal           StudyGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([userId])
+}
+
+model RevisionSchedule {
+  id               String    @id @default(uuid())
+  userId           String
+  topicId          String?
+  subject          String
+  topicName        String
+  easeFactor       Float     @default(2.5)
+  intervalDays     Int       @default(1)
+  repetitionCount  Int       @default(0)
+  lastRevisedAt    DateTime?
+  nextRevisionDate DateTime
+  status           String    @default("PENDING")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, nextRevisionDate])
+}
+
+model StudyConstraint {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  maxDailyHours      Float    @default(6)
+  preferredStartHour Int      @default(9)
+  preferredEndHour   Int      @default(21)
+  breakFrequencyMins Int      @default(50)
+  avoidLateNight     Boolean  @default(true)
+  createdDays        String[] @default(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FocusProfile {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  chronotype           String   @default("BALANCED")
+  peakFocusHours       Int[]    @default([9, 10, 11, 15, 16])
+  fatigueThresholdMins Int      @default(90)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LearningRecommendation {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   @default("REVISION")
+  actionText  String
+  reasoning   String
+  subject     String?
+  topic       String?
+  priority    String   @default("MEDIUM")
+  isDismissed Boolean  @default(false)
+  isApplied   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDismissed])
+}
+
+model ProductivityMetric {
+  id               String   @id @default(uuid())
+  userId           String
+  date             DateTime
+  totalStudyMins   Int      @default(0)
+  completedBlocks  Int      @default(0)
+  focusScore       Float    @default(85)
+  completionRate   Float    @default(100)
+  learningVelocity Float    @default(1.0)
+  streakDays       Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model PlannerSettings {
+  id                       String   @id @default(uuid())
+  userId                   String   @unique
+  dailyTargetMins          Int      @default(240)
+  spacedRepetitionEnabled  Boolean  @default(true)
+  autoRescheduleUnfinished Boolean  @default(true)
+  preferredTutorMode       String   @default("standard")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
