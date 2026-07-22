@@ -191,3 +191,123 @@ export function useTasksAnalytics(workspaceId: string | null) {
     enabled: !!workspaceId,
   });
 }
+
+export function useBurnupChart(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ['tasks-burnup', workspaceId],
+    queryFn: () => (workspaceId ? tasksService.getBurnupChart(workspaceId) : []),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useSprints(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ['sprints', workspaceId],
+    queryFn: () => (workspaceId ? tasksService.getSprints(workspaceId) : []),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useCreateSprint() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { workspaceId: string; name: string; startDate: string; endDate: string; goal?: string }) =>
+      tasksService.createSprint(vars.workspaceId, vars.name, vars.startDate, vars.endDate, vars.goal),
+    onSuccess: (data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints', vars.workspaceId] });
+    },
+  });
+}
+
+export function useEpics(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ['epics', workspaceId],
+    queryFn: () => (workspaceId ? tasksService.getEpics(workspaceId) : []),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useCreateEpic() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { workspaceId: string; name: string; description?: string; color?: string }) =>
+      tasksService.createEpic(vars.workspaceId, vars.name, vars.description, vars.color),
+    onSuccess: (data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['epics', vars.workspaceId] });
+    },
+  });
+}
+
+export function useDependencyGraph(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ['dependency-graph', workspaceId],
+    queryFn: () => (workspaceId ? tasksService.getDependencyGraph(workspaceId) : { nodes: [], edges: [] }),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useCheckPrerequisites(taskId: string | null) {
+  return useQuery({
+    queryKey: ['prerequisites-check', taskId],
+    queryFn: () => (taskId ? tasksService.checkPrerequisites(taskId) : null),
+    enabled: !!taskId,
+  });
+}
+
+export function useGenerateTasksFromAi() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { workspaceId: string; projectId?: string; sourceType?: string; sourceText?: string }) =>
+      tasksService.generateTasksFromAi(dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useEstimateDuration() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) => tasksService.estimateDuration(taskId),
+    onSuccess: (data, taskId) => {
+      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useAddTimeLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { taskId: string; durationMins: number; notes?: string }) =>
+      tasksService.addTimeLog(vars.taskId, vars.durationMins, vars.notes),
+    onSuccess: (data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['timelogs', vars.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task', vars.taskId] });
+    },
+  });
+}
+
+export function useTimeLogs(taskId: string | null) {
+  return useQuery({
+    queryKey: ['timelogs', taskId],
+    queryFn: () => (taskId ? tasksService.getTimeLogs(taskId) : []),
+    enabled: !!taskId,
+  });
+}
+
+export function useFocusContext(taskId: string | null) {
+  return useQuery({
+    queryKey: ['focus-context', taskId],
+    queryFn: () => (taskId ? tasksService.getFocusContext(taskId) : null),
+    enabled: !!taskId,
+  });
+}
+
+export function useDetectOverload(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ['detect-overload', workspaceId],
+    queryFn: () => (workspaceId ? tasksService.detectOverload(workspaceId) : null),
+    enabled: !!workspaceId,
+  });
+}

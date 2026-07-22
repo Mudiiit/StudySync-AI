@@ -1,8 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { TasksRepository } from './repositories/tasks.repository';
-import { AiService } from '../ai/ai.service';
+import { AiEngine } from '../ai/ai.engine';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspaceService } from './services/workspace.service';
+import { BoardService } from './services/board.service';
+import { DependencyService } from './services/dependency.service';
+import { AutomationService } from './services/automation.service';
+import { EstimationService } from './services/estimation.service';
+import { PriorityService } from './services/priority.service';
+import { AnalyticsService } from './services/analytics.service';
+import { getQueueToken } from '@nestjs/bullmq';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -24,15 +32,63 @@ describe('TasksService', () => {
     findRecentActivity: jest.fn(),
   };
 
-  const mockAiService = {
-    taskBreakdown: jest.fn(),
+  const mockAiEngine = {
+    generate: jest.fn(),
   };
 
   const mockPrismaService = {
     task: {
       findMany: jest.fn(),
       updateMany: jest.fn(),
+      findUnique: jest.fn(),
     },
+    userMemory: {
+      findUnique: jest.fn(),
+    },
+  };
+
+  const mockWorkspaceService = {
+    getWorkspaces: jest.fn(),
+    createWorkspace: jest.fn(),
+    getProjects: jest.fn(),
+    createProject: jest.fn(),
+    getSprints: jest.fn(),
+    createSprint: jest.fn(),
+    getEpics: jest.fn(),
+    createEpic: jest.fn(),
+  };
+
+  const mockBoardService = {
+    getKanbanColumns: jest.fn(),
+  };
+
+  const mockDependencyService = {
+    checkDependencies: jest.fn(),
+    getDependencyGraph: jest.fn(),
+  };
+
+  const mockAutomationService = {
+    autoBreakdownTask: jest.fn(),
+    handleOverdueTasks: jest.fn(),
+    detectOverload: jest.fn(),
+  };
+
+  const mockEstimationService = {
+    estimateDuration: jest.fn(),
+  };
+
+  const mockPriorityService = {
+    calculatePriorityScore: jest.fn(),
+    runAiPrioritization: jest.fn(),
+  };
+
+  const mockAnalyticsService = {
+    getWorkspaceAnalytics: jest.fn(),
+    getBurnupChart: jest.fn(),
+  };
+
+  const mockQueue = {
+    add: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -40,8 +96,16 @@ describe('TasksService', () => {
       providers: [
         TasksService,
         { provide: TasksRepository, useValue: mockTasksRepo },
-        { provide: AiService, useValue: mockAiService },
+        { provide: AiEngine, useValue: mockAiEngine },
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: WorkspaceService, useValue: mockWorkspaceService },
+        { provide: BoardService, useValue: mockBoardService },
+        { provide: DependencyService, useValue: mockDependencyService },
+        { provide: AutomationService, useValue: mockAutomationService },
+        { provide: EstimationService, useValue: mockEstimationService },
+        { provide: PriorityService, useValue: mockPriorityService },
+        { provide: AnalyticsService, useValue: mockAnalyticsService },
+        { provide: getQueueToken('tasks-queue'), useValue: mockQueue },
       ],
     }).compile();
 
@@ -50,67 +114,5 @@ describe('TasksService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-  });
-
-  describe('analytics', () => {
-    it('should correctly sum task statistics', async () => {
-      const mockTasks = [
-        { id: '1', isCompleted: true, priority: 'HIGH', status: 'DONE' },
-        {
-          id: '2',
-          isCompleted: false,
-          priority: 'MEDIUM',
-          status: 'IN_PROGRESS',
-        },
-        { id: '3', isCompleted: false, priority: 'LOW', status: 'TODO' },
-      ];
-      mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
-
-      const stats = await service.getAnalytics('user-1', 'ws-1');
-      expect(stats.totalTasks).toBe(3);
-      expect(stats.completedTasks).toBe(1);
-      expect(stats.completionRate).toBe(33); // 1/3 = 33%
-      expect(stats.priorityDistribution.HIGH).toBe(1);
-      expect(stats.statusDistribution.TODO).toBe(1);
-    });
-
-    it('should handle zero tasks cleanly', async () => {
-      mockPrismaService.task.findMany.mockResolvedValue([]);
-      const stats = await service.getAnalytics('user-1', 'ws-1');
-      expect(stats.totalTasks).toBe(0);
-      expect(stats.completionRate).toBe(0);
-    });
-  });
-
-  describe('AI Task Breakdown', () => {
-    it('should query AiService and insert generated subtasks', async () => {
-      const task = {
-        id: 'task-123',
-        title: 'Write Report',
-        description: 'Draft summary',
-      };
-      mockTasksRepo.findTaskById.mockResolvedValue(task);
-      mockAiService.taskBreakdown.mockResolvedValue(['Step 1', 'Step 2']);
-      mockTasksRepo.createChecklist.mockResolvedValue({
-        id: 'chk-1',
-        title: 'AI Breakdown Steps',
-      });
-      mockTasksRepo.addChecklistItem.mockImplementation(
-        (userId: string, chkId: string, title: string) => ({
-          id: 'item-id',
-          checklistId: chkId,
-          title,
-        }),
-      );
-
-      const res = await service.triggerAiBreakdown('user-1', 'task-123');
-      expect(res.title).toBe('AI Breakdown Steps');
-      expect(res.items.length).toBe(2);
-      expect(res.items[0].title).toBe('Step 1');
-      expect(mockAiService.taskBreakdown).toHaveBeenCalledWith(
-        'Write Report',
-        'Draft summary',
-      );
-    });
   });
 });

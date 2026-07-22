@@ -8,8 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  ParseBoolPipe,
-  Query as QueryDecorator,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateWorkspaceDto } from './dto/workspace.dto';
@@ -21,6 +19,8 @@ import {
   AddCommentDto,
   AddDependencyDto,
 } from './dto/task.dto';
+import { GenerateTasksDto } from './dto/generate-tasks.dto';
+import { CreateTimeLogDto } from './dto/create-time-log.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { TaskStatus } from '@studysync/database';
@@ -65,6 +65,150 @@ export class TasksController {
   }
 
   // ==========================================
+  // SPRINTS & EPICS
+  // ==========================================
+
+  @Get('sprints')
+  async getSprints(
+    @CurrentUser() user: any,
+    @Query('workspaceId') workspaceId: string,
+  ) {
+    return this.tasksService.getSprints(user.id, workspaceId);
+  }
+
+  @Post('sprints')
+  async createSprint(
+    @CurrentUser() user: any,
+    @Body('workspaceId') workspaceId: string,
+    @Body('name') name: string,
+    @Body('startDate') startDate: string,
+    @Body('endDate') endDate: string,
+    @Body('goal') goal?: string,
+  ) {
+    return this.tasksService.createSprint(
+      user.id,
+      workspaceId,
+      name,
+      new Date(startDate),
+      new Date(endDate),
+      goal,
+    );
+  }
+
+  @Get('epics')
+  async getEpics(
+    @CurrentUser() user: any,
+    @Query('workspaceId') workspaceId: string,
+  ) {
+    return this.tasksService.getEpics(user.id, workspaceId);
+  }
+
+  @Post('epics')
+  async createEpic(
+    @CurrentUser() user: any,
+    @Body('workspaceId') workspaceId: string,
+    @Body('name') name: string,
+    @Body('description') description?: string,
+    @Body('color') color?: string,
+  ) {
+    return this.tasksService.createEpic(
+      user.id,
+      workspaceId,
+      name,
+      description,
+      color,
+    );
+  }
+
+  // ==========================================
+  // KANBAN COLUMNS
+  // ==========================================
+
+  @Get('kanban')
+  async getKanbanColumns(
+    @CurrentUser() user: any,
+    @Query('workspaceId') workspaceId: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.tasksService.getKanbanColumns(user.id, workspaceId, projectId);
+  }
+
+  // ==========================================
+  // DEPENDENCY CHECKS & GRAPH
+  // ==========================================
+
+  @Get('dependency-graph')
+  async getDependencyGraph(
+    @CurrentUser() user: any,
+    @Query('workspaceId') workspaceId: string,
+  ) {
+    return this.tasksService.getDependencyGraph(user.id, workspaceId);
+  }
+
+  @Get(':id/dependency-check')
+  async checkDependencies(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.checkDependencies(user.id, id);
+  }
+
+  // ==========================================
+  // AI AUTOMATION & GENERATION
+  // ==========================================
+
+  @Get('overload-check')
+  async detectOverload(
+    @CurrentUser() user: any,
+    @Query('workspaceId') workspaceId: string,
+  ) {
+    return this.tasksService.detectOverload(user.id, workspaceId);
+  }
+
+  @Post(':id/estimate')
+  async estimateDuration(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.estimateDuration(user.id, id);
+  }
+
+  @Post('ai/generate')
+  async generateTasksFromAi(
+    @CurrentUser() user: any,
+    @Body() dto: GenerateTasksDto,
+  ) {
+    return this.tasksService.generateTasksFromAi(
+      user.id,
+      dto.workspaceId,
+      dto.projectId,
+      dto.sourceType,
+      dto.sourceText,
+    );
+  }
+
+  // ==========================================
+  // TIME LOGS
+  // ==========================================
+
+  @Post(':id/timelog')
+  async addTimeLog(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: CreateTimeLogDto,
+  ) {
+    return this.tasksService.addTimeLog(user.id, dto);
+  }
+
+  @Get(':id/timelogs')
+  async getTimeLogs(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.getTimeLogs(user.id, id);
+  }
+
+  // ==========================================
+  // FOCUS CONTEXT
+  // ==========================================
+
+  @Get(':id/focus-context')
+  async getFocusContext(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.getFocusContext(user.id, id);
+  }
+
+  // ==========================================
   // TASKS CRUD
   // ==========================================
 
@@ -104,6 +248,14 @@ export class TasksController {
     @Query('workspaceId') workspaceId: string,
   ) {
     return this.tasksService.getAnalytics(user.id, workspaceId);
+  }
+
+  @Get('analytics/burnup')
+  async getBurnupChart(
+    @CurrentUser() user: any,
+    @Query('workspaceId') workspaceId: string,
+  ) {
+    return this.tasksService.getBurnupChart(user.id, workspaceId);
   }
 
   @Get(':id')

@@ -191,5 +191,77 @@ export const tasksService = {
     const res = await api.get('/tasks/analytics', { params: { workspaceId } });
     return res.data;
   },
+
+  async getBurnupChart(workspaceId: string): Promise<any[]> {
+    const res = await api.get('/tasks/analytics/burnup', { params: { workspaceId } });
+    return res.data;
+  },
+
+  // Sprints & Epics
+  async getSprints(workspaceId: string): Promise<any[]> {
+    const res = await api.get('/tasks/sprints', { params: { workspaceId } });
+    return res.data;
+  },
+
+  async createSprint(workspaceId: string, name: string, startDate: string, endDate: string, goal?: string): Promise<any> {
+    const res = await api.post('/tasks/sprints', { workspaceId, name, startDate, endDate, goal });
+    return res.data;
+  },
+
+  async getEpics(workspaceId: string): Promise<any[]> {
+    const res = await api.get('/tasks/epics', { params: { workspaceId } });
+    return res.data;
+  },
+
+  async createEpic(workspaceId: string, name: string, description?: string, color?: string): Promise<any> {
+    const res = await api.post('/tasks/epics', { workspaceId, name, description, color });
+    return res.data;
+  },
+
+  // Dependency Graph & Checks
+  async getDependencyGraph(workspaceId: string): Promise<{ nodes: any[]; edges: any[] }> {
+    const res = await api.get('/tasks/dependency-graph', { params: { workspaceId } });
+    return res.data;
+  },
+
+  async checkPrerequisites(taskId: string): Promise<{ hasUnmetDependencies: boolean; unmetPrerequisites: any[] }> {
+    const res = await api.get(`/tasks/${taskId}/dependency-check`);
+    return res.data;
+  },
+
+  // AI Task Generation
+  async generateTasksFromAi(dto: { workspaceId: string; projectId?: string; sourceType?: string; sourceText?: string }): Promise<any[]> {
+    const res = await api.post('/tasks/ai/generate', dto);
+    return res.data;
+  },
+
+  // AI Time Estimation
+  async estimateDuration(taskId: string): Promise<number> {
+    const res = await api.post(`/tasks/${taskId}/estimate`);
+    return res.data;
+  },
+
+  // Time Logs
+  async addTimeLog(taskId: string, durationMins: number, notes?: string): Promise<any> {
+    const res = await api.post(`/tasks/${taskId}/timelog`, { taskId, durationMins, notes });
+    return res.data;
+  },
+
+  async getTimeLogs(taskId: string): Promise<any[]> {
+    const res = await api.get(`/tasks/${taskId}/timelogs`);
+    return res.data;
+  },
+
+  // Focus Context
+  async getFocusContext(taskId: string): Promise<any> {
+    const res = await api.get(`/tasks/${taskId}/focus-context`);
+    return res.data;
+  },
+
+  // Overload Check
+  async detectOverload(workspaceId: string): Promise<{ isOverloaded: boolean; message?: string }> {
+    const res = await api.get('/tasks/overload-check', { params: { workspaceId } });
+    return res.data;
+  },
 };
 export default tasksService;

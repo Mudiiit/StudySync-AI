@@ -73,6 +73,11 @@ model User {
   learningRecommendations LearningRecommendation[]
   productivityMetrics    ProductivityMetric[]
   plannerSettings        PlannerSettings?
+  sprints                Sprint[]
+  epics                  Epic[]
+  automationRules        AutomationRule[]
+  timeLogs               TimeLog[]
+  taskAnalytics          TaskAnalytics[]
   studyPlanner           StudyPlanner?
   subjects               Subject[]
   tags                   Tag[]
@@ -362,16 +367,105 @@ model EventNotification {
 }
 
 model TaskWorkspace {
+  id              String           @id @default(uuid())
+  userId          String
+  name            String
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tasks           Task[]
+  projects        TaskProject[]
+  sprints         Sprint[]
+  epics           Epic[]
+  automationRules AutomationRule[]
+  taskAnalytics   TaskAnalytics[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Sprint {
   id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  name        String
+  goal        String?
+  startDate   DateTime
+  endDate     DateTime
+  status      String        @default("ACTIVE")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   TaskWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model Epic {
+  id          String        @id @default(uuid())
+  workspaceId String
   userId      String
   name        String
   description String?
+  color       String        @default("#7c3aed")
+  status      String        @default("IN_PROGRESS")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  tasks       Task[]
-  projects    TaskProject[]
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   TaskWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model AutomationRule {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  trigger     String
+  action      String
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   TaskWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model TimeLog {
+  id           String    @id @default(uuid())
+  taskId       String
+  userId       String
+  durationMins Int       @default(30)
+  startTime    DateTime  @default(now())
+  endTime      DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  task         Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+}
+
+model TaskAnalytics {
+  id             String        @id @default(uuid())
+  workspaceId    String
+  userId         String
+  date           DateTime
+  completionRate Float         @default(100)
+  velocity       Float         @default(1.0)
+  burnupScore    Float         @default(0)
+  burndownScore  Float         @default(0)
+  overdueCount   Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace      TaskWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, date])
   @@index([userId])
 }
 
@@ -382,6 +476,7 @@ model TaskProject {
   description String?
   status      ProjectStatus @default(PLANNING)
   dueDate     DateTime?
+  healthScore Float         @default(100.0)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   tasks       Task[]
@@ -399,12 +494,20 @@ model Task {
   description      String?
   status           TaskStatus         @default(TODO)
   priority         TaskPriority       @default(MEDIUM)
+  difficulty       String             @default("MEDIUM")
+  aiPriorityScore  Float              @default(50.0)
   dueDate          DateTime?
   estimatedMinutes Int?
   actualMinutes    Int?
   isCompleted      Boolean            @default(false)
   inTrash          Boolean            @default(false)
   order            Int                @default(0)
+  tutorConvId      String?
+  documentId       String?
+  noteId           String?
+  quizId           String?
+  sprintId         String?
+  epicId           String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   pomodoroSessions PomodoroSession[]
@@ -422,6 +525,7 @@ model Task {
   labelMappings    TaskLabelMapping[]
   recurrence       TaskRecurrence?
   reminders        TaskReminder[]
+  timeLogs         TimeLog[]
 
   @@index([userId])
   @@index([workspaceId])
