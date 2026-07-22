@@ -1,4 +1,9 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  forwardRef,
+  NotFoundException,
+} from '@nestjs/common';
 import { TasksRepository } from './repositories/tasks.repository';
 import { CreateWorkspaceDto } from './dto/workspace.dto';
 import { CreateProjectDto } from './dto/project.dto';
@@ -365,6 +370,12 @@ Return JSON ONLY in the format: [{"title": "...", "description": "...", "priorit
   // ==========================================
 
   async addTimeLog(userId: string, dto: CreateTimeLogDto) {
+    const task = await this.prisma.task.findFirst({
+      where: { id: dto.taskId, userId },
+    });
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
     return this.prisma.timeLog.create({
       data: {
         taskId: dto.taskId,

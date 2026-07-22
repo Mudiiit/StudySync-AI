@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { XpEngineService } from '../auth/xp-engine.service';
@@ -73,6 +74,10 @@ export class GoalsController {
       where: { id },
     });
 
+    if (!existingGoal || existingGoal.userId !== user.id) {
+      throw new NotFoundException('Goal not found');
+    }
+
     const goal = await this.prisma.goal.update({
       where: { id },
       data: {
@@ -104,6 +109,15 @@ export class GoalsController {
     @Param('mileId') mileId: string,
     @Body('isCompleted') isCompleted: boolean,
   ) {
+    const milestone = await this.prisma.goalMilestone.findUnique({
+      where: { id: mileId },
+      include: { goal: true },
+    });
+
+    if (!milestone || milestone.goal.userId !== user.id) {
+      throw new NotFoundException('Milestone not found');
+    }
+
     await this.prisma.goalMilestone.update({
       where: { id: mileId },
       data: { isCompleted },
@@ -140,6 +154,14 @@ export class GoalsController {
 
   @Delete(':id')
   async deleteGoal(@CurrentUser() user: any, @Param('id') id: string) {
+    const existingGoal = await this.prisma.goal.findUnique({
+      where: { id },
+    });
+
+    if (!existingGoal || existingGoal.userId !== user.id) {
+      throw new NotFoundException('Goal not found');
+    }
+
     return this.prisma.goal.delete({
       where: { id },
     });
