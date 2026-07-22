@@ -14,6 +14,7 @@ import ProfileCard, { getRankTitle } from '@/components/profile/ProfileCard';
 import AvatarPicker from '@/components/profile/AvatarPicker';
 import { motion } from 'framer-motion';
 import { Trophy, Flame, BookOpen, Brain, Clock, Upload, Target, Award, Activity, History } from 'lucide-react';
+import BadgeEmblem from '@/components/achievements/BadgeEmblem';
 
 export default function ProfilePage() {
   const searchParams = useSearchParams();
@@ -699,9 +700,13 @@ export default function ProfilePage() {
                             ) : (
                               achievements.filter(a => a.unlocked && (a.tier === 'LEGENDARY' || a.tier === 'MYTHIC' || a.tier === 'EPIC')).slice(0, 3).map(ach => (
                                 <div key={ach.id} className="bg-zinc-950/40 border border-zinc-850 p-3 rounded-2xl text-center space-y-1.5 flex flex-col items-center animate-fade-in">
-                                  <div className="w-8 h-8 rounded-xl bg-violet-650/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-                                    <Trophy className="w-4 h-4" />
-                                  </div>
+                                  <BadgeEmblem
+                                    category={ach.category}
+                                    tier={ach.tier as any}
+                                    unlocked={ach.unlocked}
+                                    isSecret={ach.isSecret}
+                                    size={36}
+                                  />
                                   <span className="text-[9px] font-extrabold text-zinc-300 block truncate w-full">{ach.title}</span>
                                   <span className="text-[7px] font-extrabold text-violet-400 uppercase tracking-wider">{ach.tier}</span>
                                 </div>

@@ -8,6 +8,7 @@ import {
 import achievementsService, { UserAchievement } from '@/services/achievements';
 import { useToast } from '@/components/providers/ToastProvider';
 import { motion } from 'framer-motion';
+import BadgeEmblem from '@/components/achievements/BadgeEmblem';
 
 export default function AchievementsPage() {
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
@@ -252,14 +253,16 @@ export default function AchievementsPage() {
                   )}
 
                   {/* Header info */}
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 items-center">
                     {/* Badge Icon circle */}
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-md shrink-0 bg-zinc-950 ${styles.border}`}>
-                      {isLockedSecret ? (
-                        <HelpCircle className="w-5 h-5 text-zinc-600 animate-pulse" />
-                      ) : (
-                        getCategoryIcon(ach.category)
-                      )}
+                    <div className="shrink-0">
+                      <BadgeEmblem
+                        category={ach.category}
+                        tier={ach.tier as any}
+                        unlocked={ach.unlocked}
+                        isSecret={ach.isSecret}
+                        size={56}
+                      />
                     </div>
 
                     {/* Metadata summary */}
