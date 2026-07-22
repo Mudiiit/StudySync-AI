@@ -177,6 +177,10 @@ export default function LeaderboardPage() {
     return null;
   }, [activeTab, currentUserWeekly, currentUserMonthly, activeList, profile]);
 
+  const isUserInTop20 = useMemo(() => {
+    return filteredList.some(u => u.userId === profile?.userId);
+  }, [filteredList, profile]);
+
   // Dynamic division classification system based on ranks
   const getDivisionByRank = (rank: number) => {
     if (rank === 0 || !rank) return { name: 'Unranked', text: 'text-zinc-550', border: 'border-zinc-800/80', bg: 'bg-zinc-950/60' };
@@ -623,11 +627,23 @@ export default function LeaderboardPage() {
                 )}
               </div>
             ) : filteredList.length === 0 ? (
-              <div className="py-16 text-center text-zinc-650 text-xs border border-dashed border-zinc-900 rounded-3xl p-8 bg-zinc-950/20">
-                No students match the search filter.
+              <div className="py-16 text-center text-zinc-550 text-xs border border-dashed border-zinc-900 rounded-3xl p-8 bg-zinc-950/20 flex flex-col items-center justify-center gap-3">
+                <Users className="w-8 h-8 text-zinc-650" />
+                <p className="font-semibold text-zinc-400">
+                  {searchQuery.trim() 
+                    ? "No students match the search filter." 
+                    : "Invite classmates to compete and build your leaderboard."
+                  }
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
+                {filteredList.length < 5 && !searchQuery.trim() && (
+                  <div className="p-4 bg-zinc-900/20 border border-zinc-900 rounded-2xl text-center text-xs text-zinc-400 flex items-center justify-center gap-2">
+                    <Users className="w-4 h-4 text-violet-400" />
+                    <span>Invite classmates to compete and build your leaderboard.</span>
+                  </div>
+                )}
                 {/* Renders full list including podium values in row formatting if needed, but here we render remaining listStandings if we showed podium */}
                 {filteredList.map((user, index) => {
                   const isTop3 = index < 3;
@@ -720,6 +736,85 @@ export default function LeaderboardPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Dedicated Your Position Section if outside Top 20 */}
+            {!isUserInTop20 && selectedCurrentUser && (
+              <div className="mt-6 border-t border-zinc-900 pt-6 animate-fadeIn">
+                <span className="text-[9px] font-extrabold text-zinc-550 uppercase tracking-wider block mb-3">Your Position</span>
+                <div 
+                  className="group p-4 rounded-2xl border border-violet-500/40 bg-violet-650/5 shadow-[0_0_15px_rgba(139,92,246,0.1)] flex items-center justify-between gap-4 relative overflow-hidden"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 text-center text-xs font-black text-zinc-500 shrink-0">
+                      #{selectedCurrentUser.rank}
+                    </div>
+
+                    <div className="w-9 h-9 rounded-full p-0.5 flex items-center justify-center overflow-hidden shrink-0 bg-gradient-to-tr from-violet-500 to-fuchsia-500">
+                      <div className="w-full h-full rounded-full bg-zinc-950 p-0.5 overflow-hidden">
+                        {profile?.avatarUrl ? (
+                          <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          <GraduationCap className="w-4 h-4 text-violet-400" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-left min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-extrabold text-zinc-200 block truncate max-w-[120px]">
+                          {profile?.displayName || profile?.firstName}
+                        </span>
+                        <span className="text-[8px] font-black bg-zinc-850 border border-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                          Lvl {selectedCurrentUser.level}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-zinc-550 block truncate mt-0.5">
+                        @{profile?.username || 'learner'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-5 shrink-0">
+                    {/* League Tag */}
+                    <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider shrink-0 hidden sm:inline-block ${getDivisionByRank(selectedCurrentUser.rank).bg} ${getDivisionByRank(selectedCurrentUser.rank).border} ${getDivisionByRank(selectedCurrentUser.rank).text}`}>
+                      {getDivisionByRank(selectedCurrentUser.rank).name}
+                    </span>
+
+                    {/* Rank change indicator */}
+                    {selectedCurrentUser.rankChange && (
+                      <div className="w-12 flex justify-center items-center shrink-0">
+                        {selectedCurrentUser.rankChange.includes('▲') ? (
+                          <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5">
+                            <ChevronUp className="w-3.5 h-3.5" /> {selectedCurrentUser.rankChange.replace('▲', '')}
+                          </span>
+                        ) : selectedCurrentUser.rankChange.includes('▼') ? (
+                          <span className="text-[10px] font-bold text-red-400 flex items-center gap-0.5">
+                            <ChevronDown className="w-3.5 h-3.5" /> {selectedCurrentUser.rankChange.replace('▼', '')}
+                          </span>
+                        ) : selectedCurrentUser.rankChange === 'New' ? (
+                          <span className="text-[9px] font-extrabold text-violet-400 uppercase tracking-wide">
+                            NEW
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-zinc-650 flex items-center justify-center">
+                            <Minus className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="text-right w-20 shrink-0">
+                      <span className="text-xs font-black text-violet-400 block">
+                        {selectedCurrentUser.xp.toLocaleString()} XP
+                      </span>
+                      <span className="text-[10px] text-zinc-550 block mt-0.5">
+                        {selectedCurrentUser.studyHours.toFixed(1)}h focus
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface LeaderboardUser {
@@ -17,11 +17,242 @@ export interface LeaderboardUser {
   quizAccuracy: number;
 }
 
+const DEMO_USERS = [
+  {
+    firstName: 'Aryan',
+    lastName: 'Mehta',
+    username: 'aryan',
+    email: 'aryan@studysync.demo',
+    level: 12,
+    xp: 12500,
+    studyHours: 24.5,
+    streak: 18,
+    achievementsCount: 15,
+  },
+  {
+    firstName: 'Priya',
+    lastName: 'Sharma',
+    username: 'priya',
+    email: 'priya@studysync.demo',
+    level: 11,
+    xp: 11900,
+    studyHours: 21.0,
+    streak: 14,
+    achievementsCount: 12,
+  },
+  {
+    firstName: 'Rohan',
+    lastName: 'Verma',
+    username: 'rohann',
+    email: 'rohan@studysync.demo',
+    level: 10,
+    xp: 10600,
+    studyHours: 18.2,
+    streak: 12,
+    achievementsCount: 10,
+  },
+  {
+    firstName: 'Neha',
+    lastName: 'Kapoor',
+    username: 'neha_k',
+    email: 'neha@studysync.demo',
+    level: 9,
+    xp: 9400,
+    studyHours: 16.5,
+    streak: 10,
+    achievementsCount: 9,
+  },
+  {
+    firstName: 'Aditya',
+    lastName: 'Singh',
+    username: 'aditya',
+    email: 'aditya@studysync.demo',
+    level: 8,
+    xp: 7800,
+    studyHours: 14.0,
+    streak: 8,
+    achievementsCount: 8,
+  },
+  {
+    firstName: 'Sneha',
+    lastName: 'Gupta',
+    username: 'sneha_g',
+    email: 'sneha@studysync.demo',
+    level: 7,
+    xp: 5900,
+    studyHours: 11.5,
+    streak: 6,
+    achievementsCount: 7,
+  },
+  {
+    firstName: 'Karan',
+    lastName: 'Malhotra',
+    username: 'karan_m',
+    email: 'karan@studysync.demo',
+    level: 6,
+    xp: 3200,
+    studyHours: 8.0,
+    streak: 4,
+    achievementsCount: 5,
+  },
+  {
+    firstName: 'Aisha',
+    lastName: 'Khan',
+    username: 'aisha',
+    email: 'aisha@studysync.demo',
+    level: 5,
+    xp: 2900,
+    studyHours: 7.2,
+    streak: 3,
+    achievementsCount: 4,
+  },
+  {
+    firstName: 'Vivek',
+    lastName: 'Jain',
+    username: 'vivek_j',
+    email: 'vivek@studysync.demo',
+    level: 5,
+    xp: 2500,
+    studyHours: 6.5,
+    streak: 3,
+    achievementsCount: 4,
+  },
+  {
+    firstName: 'Ananya',
+    lastName: 'Roy',
+    username: 'ananya',
+    email: 'ananya@studysync.demo',
+    level: 4,
+    xp: 2100,
+    studyHours: 5.8,
+    streak: 2,
+    achievementsCount: 3,
+  },
+  {
+    firstName: 'Rahul',
+    lastName: 'Bansal',
+    username: 'rahul_b',
+    email: 'rahul@studysync.demo',
+    level: 4,
+    xp: 1800,
+    studyHours: 4.5,
+    streak: 2,
+    achievementsCount: 3,
+  },
+  {
+    firstName: 'Ishita',
+    lastName: 'Agarwal',
+    username: 'ishita',
+    email: 'ishita@studysync.demo',
+    level: 3,
+    xp: 1500,
+    studyHours: 3.8,
+    streak: 1,
+    achievementsCount: 2,
+  },
+  {
+    firstName: 'Arjun',
+    lastName: 'Patel',
+    username: 'arjun_p',
+    email: 'arjun@studysync.demo',
+    level: 3,
+    xp: 1200,
+    studyHours: 3.0,
+    streak: 1,
+    achievementsCount: 2,
+  },
+  {
+    firstName: 'Meera',
+    lastName: 'Joshi',
+    username: 'meera',
+    email: 'meera@studysync.demo',
+    level: 2,
+    xp: 900,
+    studyHours: 2.2,
+    streak: 1,
+    achievementsCount: 1,
+  },
+  {
+    firstName: 'Dev',
+    lastName: 'Khanna',
+    username: 'dev_k',
+    email: 'dev@studysync.demo',
+    level: 2,
+    xp: 700,
+    studyHours: 1.8,
+    streak: 0,
+    achievementsCount: 1,
+  },
+  {
+    firstName: 'Nikhil',
+    lastName: 'Saini',
+    username: 'nikhil',
+    email: 'nikhil@studysync.demo',
+    level: 1,
+    xp: 500,
+    studyHours: 1.2,
+    streak: 0,
+    achievementsCount: 0,
+  },
+  {
+    firstName: 'Tanya',
+    lastName: 'Arora',
+    username: 'tanya_a',
+    email: 'tanya@studysync.demo',
+    level: 1,
+    xp: 300,
+    studyHours: 0.8,
+    streak: 0,
+    achievementsCount: 0,
+  },
+  {
+    firstName: 'Yash',
+    lastName: 'Saxena',
+    username: 'yash',
+    email: 'yash@studysync.demo',
+    level: 1,
+    xp: 200,
+    studyHours: 0.5,
+    streak: 0,
+    achievementsCount: 0,
+  },
+];
+
+function getDemoAvatar(firstName: string, lastName: string): string {
+  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const colors = [
+    '%23F59E0B', // Amber
+    '%23EC4899', // Pink
+    '%233B82F6', // Blue
+    '%2310B981', // Emerald
+    '%238B5CF6', // Violet
+    '%23F43F5E', // Rose
+    '%2306B6D4', // Cyan
+    '%2384CC16', // Lime
+    '%236366F1', // Indigo
+    '%2314B8A6', // Teal
+    '%23F97316', // Orange
+    '%23D946EF', // Fuchsia
+    '%23A855F7', // Purple
+    '%2322C55E', // Green
+  ];
+  const charCodeSum = initials.charCodeAt(0) + initials.charCodeAt(1);
+  const color = colors[charCodeSum % colors.length];
+
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="${color}"/><text x="50" y="55" font-family="Arial" font-size="35" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+}
+
 @Injectable()
-export class LeaderboardService {
+export class LeaderboardService implements OnModuleInit {
   private readonly logger = new Logger(LeaderboardService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  async onModuleInit() {
+    if (process.env.NODE_ENV !== 'production') {
+      await this.cleanAndSeedDemoData();
+    }
+  }
 
   // ==========================================
   // GET WEEKLY LEADERBOARD
@@ -67,7 +298,7 @@ export class LeaderboardService {
     );
 
     return {
-      list: rankedList.slice(0, 100), // Top 100
+      list: rankedList.slice(0, 20), // Top 20
       currentUser,
       countdownSeconds,
     };
@@ -122,7 +353,7 @@ export class LeaderboardService {
     );
 
     return {
-      list: rankedList.slice(0, 100),
+      list: rankedList.slice(0, 20), // Top 20
       currentUser,
       countdownSeconds,
     };
@@ -166,7 +397,7 @@ export class LeaderboardService {
           rankChange,
         };
       })
-      .slice(0, 50); // limit cohort buddies
+      .slice(0, 20); // limit cohort buddies
   }
 
   // ==========================================
@@ -472,11 +703,129 @@ export class LeaderboardService {
       };
     });
 
+    const activeLearners = mapped.filter(
+      (u) => u.xp > 0 || u.studyHours > 0 || u.quizAccuracy > 0,
+    );
+
     // Secondary sorts: Study Hours, then Quiz Accuracy
-    return mapped.sort((a, b) => {
+    return activeLearners.sort((a, b) => {
       if (b.xp !== a.xp) return b.xp - a.xp;
       if (b.studyHours !== a.studyHours) return b.studyHours - a.studyHours;
       return b.quizAccuracy - a.quizAccuracy;
     });
+  }
+
+  async cleanAndSeedDemoData(): Promise<void> {
+    try {
+      this.logger.log('Cleaning duplicate dev/test profiles...');
+
+      // 1. Delete users matching test patterns (e.g., Alice, Bob, Test)
+      const testPatterns = [
+        'test',
+        'alice',
+        'bob',
+        'verify',
+        'avat',
+        'dummy',
+        'sample',
+        'temp',
+      ];
+
+      const users = await this.prisma.user.findMany({
+        include: { profile: true },
+      });
+
+      for (const user of users) {
+        const email = user.email.toLowerCase();
+        const username = user.profile?.username?.toLowerCase() || '';
+        const displayName = user.profile?.displayName?.toLowerCase() || '';
+
+        const isTest = testPatterns.some(
+          (pat) =>
+            email.includes(pat) ||
+            username.includes(pat) ||
+            displayName.includes(pat),
+        );
+
+        if (isTest && !email.includes('studysync.demo')) {
+          this.logger.log(`Removing dev test user: ${user.email}`);
+          await this.prisma.user
+            .delete({ where: { id: user.id } })
+            .catch(() => {});
+        }
+      }
+
+      // 2. Seed 18 realistic demo users
+      this.logger.log('Seeding clean demo leaderboard contestants...');
+      for (const du of DEMO_USERS) {
+        const existingUser = await this.prisma.user.findUnique({
+          where: { email: du.email },
+        });
+
+        if (!existingUser) {
+          const avatarUrl = getDemoAvatar(du.firstName, du.lastName);
+          const newUser = await this.prisma.user.create({
+            data: {
+              email: du.email,
+              passwordHash:
+                '$2b$10$demoUserPasswordHashForTestPlaceholderValues',
+              role: 'STUDENT',
+              profile: {
+                create: {
+                  firstName: du.firstName,
+                  lastName: du.lastName,
+                  username: du.username,
+                  displayName: `${du.firstName} ${du.lastName}`,
+                  avatarUrl,
+                  level: du.level,
+                  xp: du.xp,
+                  lifetimeXp: du.xp * 2,
+                },
+              },
+            },
+          });
+
+          // Add XpLog for weekly/monthly calculations
+          await this.prisma.xpLog.create({
+            data: {
+              userId: newUser.id,
+              amount: du.xp,
+              source: 'STUDY_SESSION',
+              description: 'Focus session rewards',
+            },
+          });
+
+          // Add PomodoroSessions for studyHours and streak count
+          await this.prisma.pomodoroSession.create({
+            data: {
+              userId: newUser.id,
+              durationMinutes: Math.round(du.studyHours * 60),
+              completed: true,
+            },
+          });
+
+          // Add User achievements dummy targets
+          for (let i = 0; i < du.achievementsCount; i++) {
+            await this.prisma.userAchievement
+              .create({
+                data: {
+                  userId: newUser.id,
+                  achievementId: `ach-demo-${i + 1}`,
+                  progress: 100,
+                  target: 100,
+                  unlocked: true,
+                  unlockedAt: new Date(),
+                  xpGranted: 100,
+                },
+              })
+              .catch(() => {}); // ignore duplicates
+          }
+        }
+      }
+
+      this.logger.log('Leaderboard cleanup and seed completed.');
+    } catch (e) {
+      this.logger.error('Error cleaning or seeding demo data:', e);
+    }
   }
 }
