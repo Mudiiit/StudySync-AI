@@ -35,8 +35,11 @@ export class TasksController {
   // ==========================================
 
   @Get('workspaces')
-  async getWorkspaces(@CurrentUser() user: any) {
-    return this.tasksService.getWorkspaces(user.id);
+  async getWorkspaces(
+    @CurrentUser() user: any,
+    @Query('includeArchived') includeArchived?: string,
+  ) {
+    return this.tasksService.getWorkspaces(user.id, includeArchived === 'true');
   }
 
   @Post('workspaces')
@@ -45,6 +48,36 @@ export class TasksController {
     @Body() dto: CreateWorkspaceDto,
   ) {
     return this.tasksService.createWorkspace(user.id, dto);
+  }
+
+  @Patch('workspaces/:id')
+  async updateWorkspace(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body('name') name: string,
+    @Body('description') description?: string,
+  ) {
+    return this.tasksService.updateWorkspace(user.id, id, name, description);
+  }
+
+  @Delete('workspaces/:id')
+  async deleteWorkspace(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.deleteWorkspace(user.id, id);
+  }
+
+  @Post('workspaces/:id/archive')
+  async archiveWorkspace(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.archiveWorkspace(user.id, id);
+  }
+
+  @Post('workspaces/:id/restore')
+  async restoreWorkspace(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.restoreWorkspace(user.id, id);
+  }
+
+  @Post('workspaces/:id/duplicate')
+  async duplicateWorkspace(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.tasksService.duplicateWorkspace(user.id, id);
   }
 
   // ==========================================

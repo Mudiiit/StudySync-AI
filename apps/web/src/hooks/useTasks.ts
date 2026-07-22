@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksService, Task, TaskStatus } from '@/services/tasks';
 
-export function useWorkspaces() {
+export function useWorkspaces(includeArchived = false) {
   return useQuery({
-    queryKey: ['workspaces'],
-    queryFn: () => tasksService.getWorkspaces(),
+    queryKey: ['workspaces', includeArchived],
+    queryFn: () => tasksService.getWorkspaces(includeArchived),
   });
 }
 
@@ -13,6 +13,57 @@ export function useCreateWorkspace() {
   return useMutation({
     mutationFn: (vars: { name: string; description?: string }) =>
       tasksService.createWorkspace(vars.name, vars.description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    },
+  });
+}
+
+export function useUpdateWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: string; name: string; description?: string }) =>
+      tasksService.updateWorkspace(vars.id, vars.name, vars.description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    },
+  });
+}
+
+export function useArchiveWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tasksService.archiveWorkspace(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    },
+  });
+}
+
+export function useRestoreWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tasksService.restoreWorkspace(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    },
+  });
+}
+
+export function useDeleteWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tasksService.deleteWorkspace(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+    },
+  });
+}
+
+export function useDuplicateWorkspace() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tasksService.duplicateWorkspace(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
     },

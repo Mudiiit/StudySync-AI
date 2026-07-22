@@ -7,6 +7,8 @@ export interface Workspace {
   id: string;
   name: string;
   description: string | null;
+  isArchived?: boolean;
+  deletedAt?: string | null;
   createdAt: string;
 }
 
@@ -89,13 +91,37 @@ export interface Task {
 
 export const tasksService = {
   // Workspaces
-  async getWorkspaces(): Promise<Workspace[]> {
-    const res = await api.get('/tasks/workspaces');
+  async getWorkspaces(includeArchived = false): Promise<Workspace[]> {
+    const res = await api.get('/tasks/workspaces', { params: { includeArchived } });
     return res.data;
   },
 
   async createWorkspace(name: string, description?: string): Promise<Workspace> {
     const res = await api.post('/tasks/workspaces', { name, description });
+    return res.data;
+  },
+
+  async updateWorkspace(id: string, name: string, description?: string): Promise<Workspace> {
+    const res = await api.patch(`/tasks/workspaces/${id}`, { name, description });
+    return res.data;
+  },
+
+  async archiveWorkspace(id: string): Promise<Workspace> {
+    const res = await api.post(`/tasks/workspaces/${id}/archive`);
+    return res.data;
+  },
+
+  async restoreWorkspace(id: string): Promise<Workspace> {
+    const res = await api.post(`/tasks/workspaces/${id}/restore`);
+    return res.data;
+  },
+
+  async deleteWorkspace(id: string): Promise<void> {
+    await api.delete(`/tasks/workspaces/${id}`);
+  },
+
+  async duplicateWorkspace(id: string): Promise<Workspace> {
+    const res = await api.post(`/tasks/workspaces/${id}/duplicate`);
     return res.data;
   },
 

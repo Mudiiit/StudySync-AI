@@ -45,8 +45,8 @@ export class TasksService {
   // WORKSPACES
   // ==========================================
 
-  async getWorkspaces(userId: string) {
-    return this.workspaceService.getWorkspaces(userId);
+  async getWorkspaces(userId: string, includeArchived = false) {
+    return this.workspaceService.getWorkspaces(userId, includeArchived);
   }
 
   async createWorkspace(userId: string, dto: CreateWorkspaceDto) {
@@ -55,6 +55,31 @@ export class TasksService {
       dto.name,
       dto.description,
     );
+  }
+
+  async updateWorkspace(
+    userId: string,
+    id: string,
+    name: string,
+    description?: string,
+  ) {
+    return this.workspaceService.updateWorkspace(userId, id, name, description);
+  }
+
+  async archiveWorkspace(userId: string, id: string) {
+    return this.workspaceService.archiveWorkspace(userId, id);
+  }
+
+  async restoreWorkspace(userId: string, id: string) {
+    return this.workspaceService.restoreWorkspace(userId, id);
+  }
+
+  async deleteWorkspace(userId: string, id: string) {
+    return this.workspaceService.deleteWorkspace(userId, id);
+  }
+
+  async duplicateWorkspace(userId: string, id: string) {
+    return this.workspaceService.duplicateWorkspace(userId, id);
   }
 
   // ==========================================
