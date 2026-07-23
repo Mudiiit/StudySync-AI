@@ -10,6 +10,11 @@ export interface FriendUser {
   weeklyRank: number;
   status: string;
   relationship?: string; // "NONE", "FRIEND", "SENT", "RECEIVED", "BLOCKED"
+  university?: string;
+  department?: string;
+  course?: string;
+  skills?: string[];
+  interests?: string[];
 }
 
 export interface FriendRequests {
@@ -290,10 +295,8 @@ const socialService = {
   },
 
   shareNotebook: async (id: string, body: { targetUserId: string; role: string }): Promise<any> => {
-    const res = await api.post(`/social/social/notebooks/${id}/share`, body); // wait, double /social? Let's check our backend path.
-    // Backend controller is @Controller('social/notebooks')
-    // So the path is /social/notebooks/:id/share! Let's correct this.
-    return (await api.post(`/social/notebooks/${id}/share`, body)).data;
+    const res = await api.post(`/social/notebooks/${id}/share`, body);
+    return res.data;
   },
 
   revokeShare: async (id: string, targetUserId: string): Promise<any> => {

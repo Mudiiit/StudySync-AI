@@ -22,6 +22,79 @@ export class GroupsController {
   constructor(private readonly prisma: PrismaService) {}
 
   // ==========================================
+  // GET INCOMING GROUP INVITES
+  // ==========================================
+  @Get('invites')
+  async getInvites(@Request() req: any) {
+    const userId = req.user.id;
+
+    const list = await this.prisma.groupInvite.findMany({
+      where: { inviteeId: userId, status: 'PENDING' },
+      include: {
+        group: true,
+        inviter: { include: { profile: true } },
+      },
+    });
+
+    return list.map((item) => ({
+      id: item.id,
+      studyGroupId: item.studyGroupId,
+      groupName: item.group.name,
+      inviterName:
+        item.inviter.profile?.displayName ||
+        item.inviter.profile?.firstName ||
+        'someone',
+      createdAt: item.createdAt,
+    }));
+  }
+
+  // ==========================================
+  // ACCEPT GROUP INVITE
+  // ==========================================
+  @Post('invites/:inviteId/accept')
+  async acceptInvite(@Request() req: any, @Param('inviteId') inviteId: string) {
+    const userId = req.user.id;
+
+    const invite = await this.prisma.groupInvite.findUnique({
+      where: { id: inviteId },
+    });
+    if (!invite || invite.inviteeId !== userId) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    // Delete invite & join group
+    await this.prisma.groupInvite.delete({ where: { id: inviteId } });
+
+    const member = await this.prisma.studyGroupMember.create({
+      data: {
+        studyGroupId: invite.studyGroupId,
+        userId,
+        role: 'MEMBER',
+      },
+    });
+
+    return member;
+  }
+
+  // ==========================================
+  // REJECT GROUP INVITE
+  // ==========================================
+  @Post('invites/:inviteId/reject')
+  async rejectInvite(@Request() req: any, @Param('inviteId') inviteId: string) {
+    const userId = req.user.id;
+
+    const invite = await this.prisma.groupInvite.findUnique({
+      where: { id: inviteId },
+    });
+    if (!invite || invite.inviteeId !== userId) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    await this.prisma.groupInvite.delete({ where: { id: inviteId } });
+    return { success: true };
+  }
+
+  // ==========================================
   // LIST GROUPS
   // ==========================================
   @Get()
@@ -301,79 +374,6 @@ export class GroupsController {
     });
 
     return newInvite;
-  }
-
-  // ==========================================
-  // GET INCOMING GROUP INVITES
-  // ==========================================
-  @Get('invites')
-  async getInvites(@Request() req: any) {
-    const userId = req.user.id;
-
-    const list = await this.prisma.groupInvite.findMany({
-      where: { inviteeId: userId, status: 'PENDING' },
-      include: {
-        group: true,
-        inviter: { include: { profile: true } },
-      },
-    });
-
-    return list.map((item) => ({
-      id: item.id,
-      studyGroupId: item.studyGroupId,
-      groupName: item.group.name,
-      inviterName:
-        item.inviter.profile?.displayName ||
-        item.inviter.profile?.firstName ||
-        'someone',
-      createdAt: item.createdAt,
-    }));
-  }
-
-  // ==========================================
-  // ACCEPT GROUP INVITE
-  // ==========================================
-  @Post('invites/:inviteId/accept')
-  async acceptInvite(@Request() req: any, @Param('inviteId') inviteId: string) {
-    const userId = req.user.id;
-
-    const invite = await this.prisma.groupInvite.findUnique({
-      where: { id: inviteId },
-    });
-    if (!invite || invite.inviteeId !== userId) {
-      throw new NotFoundException('Invitation not found');
-    }
-
-    // Delete invite & join group
-    await this.prisma.groupInvite.delete({ where: { id: inviteId } });
-
-    const member = await this.prisma.studyGroupMember.create({
-      data: {
-        studyGroupId: invite.studyGroupId,
-        userId,
-        role: 'MEMBER',
-      },
-    });
-
-    return member;
-  }
-
-  // ==========================================
-  // REJECT GROUP INVITE
-  // ==========================================
-  @Post('invites/:inviteId/reject')
-  async rejectInvite(@Request() req: any, @Param('inviteId') inviteId: string) {
-    const userId = req.user.id;
-
-    const invite = await this.prisma.groupInvite.findUnique({
-      where: { id: inviteId },
-    });
-    if (!invite || invite.inviteeId !== userId) {
-      throw new NotFoundException('Invitation not found');
-    }
-
-    await this.prisma.groupInvite.delete({ where: { id: inviteId } });
-    return { success: true };
   }
 
   // ==========================================

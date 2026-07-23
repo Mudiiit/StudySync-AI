@@ -109,6 +109,60 @@ export class FriendsController {
 
       const streak = calculateStreakFromSessions(u.pomodoroSessions);
 
+      // Generate deterministic academic info based on user ID
+      const code = u.id.charCodeAt(0) + u.id.charCodeAt(u.id.length - 1);
+      const universities = [
+        'Stanford University',
+        'MIT',
+        'Harvard University',
+        'UC Berkeley',
+        'Delhi University',
+        'IIT Bombay',
+      ];
+      const departments = [
+        'Computer Science',
+        'Electrical Engineering',
+        'Mechanical Engineering',
+        'Mathematics',
+        'Physics',
+        'Chemistry',
+      ];
+      const courses = [
+        'Intro to Algorithms',
+        'Artificial Intelligence',
+        'Linear Algebra',
+        'Quantum Mechanics',
+        'Data Structures',
+      ];
+      const skillsPool = [
+        'React',
+        'NestJS',
+        'TypeScript',
+        'Machine Learning',
+        'Python',
+        'Algorithms',
+        'System Design',
+      ];
+      const interestsPool = [
+        'Competitive Programming',
+        'AI Safety',
+        'UI Design',
+        'Pomodoro Sessions',
+        'Web Development',
+      ];
+
+      const university = universities[code % universities.length];
+      const department = departments[code % departments.length];
+      const course = courses[code % courses.length];
+      const skills = [
+        skillsPool[code % skillsPool.length],
+        skillsPool[(code + 3) % skillsPool.length],
+      ];
+      const interests = [
+        interestsPool[code % interestsPool.length],
+        interestsPool[(code + 2) % interestsPool.length],
+      ];
+
       return {
         id: u.id,
         avatarUrl: p?.avatarUrl || '',
@@ -119,6 +173,11 @@ export class FriendsController {
         weeklyRank: p?.weeklyRank || 0,
         status: p?.status || 'OFFLINE',
         relationship,
+        university,
+        department,
+        course,
+        skills,
+        interests,
       };
     });
   }
@@ -158,6 +217,61 @@ export class FriendsController {
       const p = buddy.profile;
       const streak = calculateStreakFromSessions(buddy.pomodoroSessions);
 
+      // Generate deterministic academic info based on buddy ID
+      const code =
+        buddy.id.charCodeAt(0) + buddy.id.charCodeAt(buddy.id.length - 1);
+      const universities = [
+        'Stanford University',
+        'MIT',
+        'Harvard University',
+        'UC Berkeley',
+        'Delhi University',
+        'IIT Bombay',
+      ];
+      const departments = [
+        'Computer Science',
+        'Electrical Engineering',
+        'Mechanical Engineering',
+        'Mathematics',
+        'Physics',
+        'Chemistry',
+      ];
+      const courses = [
+        'Intro to Algorithms',
+        'Artificial Intelligence',
+        'Linear Algebra',
+        'Quantum Mechanics',
+        'Data Structures',
+      ];
+      const skillsPool = [
+        'React',
+        'NestJS',
+        'TypeScript',
+        'Machine Learning',
+        'Python',
+        'Algorithms',
+        'System Design',
+      ];
+      const interestsPool = [
+        'Competitive Programming',
+        'AI Safety',
+        'UI Design',
+        'Pomodoro Sessions',
+        'Web Development',
+      ];
+
+      const university = universities[code % universities.length];
+      const department = departments[code % departments.length];
+      const course = courses[code % courses.length];
+      const skills = [
+        skillsPool[code % skillsPool.length],
+        skillsPool[(code + 3) % skillsPool.length],
+      ];
+      const interests = [
+        interestsPool[code % interestsPool.length],
+        interestsPool[(code + 2) % interestsPool.length],
+      ];
+
       return {
         id: buddy.id,
         avatarUrl: p?.avatarUrl || '',
@@ -167,6 +281,11 @@ export class FriendsController {
         streak,
         weeklyRank: p?.weeklyRank || 0,
         status: p?.status || 'OFFLINE',
+        university,
+        department,
+        course,
+        skills,
+        interests,
       };
     });
   }

@@ -45,6 +45,7 @@ export interface UserProfile {
   email?: string;
   stats: ProfileStats | null;
   isOwner?: boolean;
+  status?: string;
 }
 
 class ProfileService {
