@@ -160,7 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {sidebarOpen && (
               <div className="flex items-center gap-1">
-                <Link href="/settings" className="p-1.5 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                <Link href="/profile?tab=identity" className="p-1.5 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
                   <Settings className="h-4 w-4" />
                 </Link>
                 <button onClick={logout} className="p-1.5 hover:bg-secondary rounded text-muted-foreground hover:text-destructive transition-colors cursor-pointer">
