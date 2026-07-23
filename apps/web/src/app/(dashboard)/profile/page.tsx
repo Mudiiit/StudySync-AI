@@ -342,11 +342,11 @@ export default function ProfilePage() {
   };
 
   const frameClasses: Record<string, string> = {
-    none: 'border-2 border-zinc-900',
-    'scholar-gold': 'border-2 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.6)]',
-    'cyberpunk-neon': 'border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)] animate-pulse',
-    'amethyst-void': 'border-2 border-fuchsia-500 shadow-[0_0_20px_rgba(217,70,239,0.5)]',
-    'emerald-leaf': 'border-2 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]'
+    none: 'border-2 border-zinc-900 shadow-[0_0_12px_rgba(139,92,246,0.1)]',
+    'scholar-gold': 'border-2 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.7)] animate-pulse',
+    'cyberpunk-neon': 'border-2 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.7)] animate-pulse',
+    'amethyst-void': 'border-2 border-fuchsia-500 shadow-[0_0_25px_rgba(217,70,239,0.6)] animate-pulse',
+    'emerald-leaf': 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.5)] animate-pulse'
   };
 
   return (
@@ -412,7 +412,7 @@ export default function ProfilePage() {
                 </svg>
 
                 {/* Avatar with selected frame wrapper */}
-                <div className={`relative w-24 h-24 rounded-full overflow-hidden bg-zinc-950 flex items-center justify-center ${frameClasses[avatarFrame] || frameClasses.none} transition-all duration-500`}>
+                <div className={`relative w-24 h-24 rounded-full overflow-hidden bg-zinc-955 flex items-center justify-center ${frameClasses[avatarFrame] || frameClasses.none} transition-all duration-500`}>
                   {profile.avatarUrl ? (
                     <img 
                       src={profile.avatarUrl} 
@@ -445,15 +445,32 @@ export default function ProfilePage() {
                     💬 {statusMessage}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-zinc-500 italic block font-semibold">"Introduce yourself under Identity tab..."</span>
+                  <span className="text-[10px] text-zinc-550 italic block font-semibold">"Introduce yourself under Identity tab..."</span>
                 )}
 
-                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2.5 py-0.5 rounded-md">
+                {/* Highly structured, elite badge chips */}
+                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-zinc-950 border border-zinc-850 text-zinc-300 px-2.5 py-1 rounded-lg">
+                    Level {level}
+                  </span>
+                  <span className={`text-[9px] font-black uppercase tracking-wider bg-zinc-950 border ${currentAccent.border} ${currentAccent.text} px-2.5 py-1 rounded-lg`}>
+                    {xp.toLocaleString()} XP ({xpPercentage}%)
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2.5 py-1 rounded-lg">
+                    Diamond League
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-lg">
+                    Rank #12
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2.5 py-1 rounded-lg flex items-center gap-0.5">
+                    🔥 {profile.stats?.streak || 0}d Streak
+                  </span>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2.5 py-1 rounded-lg">
                     {learningTitle}
                   </span>
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-zinc-850 border border-zinc-800 text-zinc-300 px-2.5 py-0.5 rounded-md">
-                    {timezone}
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    ONLINE
                   </span>
                 </div>
               </div>
@@ -470,38 +487,24 @@ export default function ProfilePage() {
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-zinc-950/50 border border-zinc-850/60 p-3 rounded-2xl">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Lifetime XP</span>
-                  <span className="text-sm font-black text-zinc-200 mt-0.5 block">{(profile.lifetimeXp || xp).toLocaleString()}</span>
-                </div>
-
-                <div className="bg-zinc-950/50 border border-zinc-850/60 p-3 rounded-2xl">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Daily Streak</span>
-                  <span className="text-sm font-black text-orange-500 mt-0.5 block flex items-center gap-1">
-                    <Flame className="w-4 h-4 fill-orange-500" />
-                    {profile.stats?.streak || 0} Days
-                  </span>
-                </div>
-
-                <div className="bg-zinc-950/50 border border-zinc-850/60 p-3 rounded-2xl">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Focus Duration</span>
-                  <span className="text-sm font-black text-zinc-200 mt-0.5 block">{profile.stats?.studyHours || 0} Hours</span>
-                </div>
-
-                <div className="bg-zinc-950/50 border border-zinc-850/60 p-3 rounded-2xl">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">XP to Next Lvl</span>
-                  <span className="text-sm font-black text-zinc-200 mt-0.5 block">{xpUntilNext.toLocaleString()}</span>
-                </div>
-
-                <div className="bg-zinc-950/50 border border-zinc-850/60 p-3 rounded-2xl">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Quizzes Taken</span>
-                  <span className="text-sm font-black text-emerald-400 mt-0.5 block">{profile.stats?.quizzesCompletedCount || 0}</span>
-                </div>
-
-                <div className="bg-zinc-950/50 border border-zinc-850/60 p-3 rounded-2xl">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Notes Logged</span>
-                  <span className="text-sm font-black text-violet-400 mt-0.5 block">{profile.stats?.notesCount || 0}</span>
-                </div>
+                {[
+                  { label: 'Lifetime XP', value: (profile.lifetimeXp || xp).toLocaleString(), color: 'text-zinc-200' },
+                  { label: 'Daily Streak', value: `${profile.stats?.streak || 0} Days`, color: 'text-orange-500', streak: true },
+                  { label: 'Focus Duration', value: `${profile.stats?.studyHours || 0} Hours`, color: 'text-zinc-200' },
+                  { label: 'XP to Next Lvl', value: xpUntilNext.toLocaleString(), color: 'text-zinc-200' },
+                  { label: 'Quizzes Taken', value: profile.stats?.quizzesCompletedCount || 0, color: 'text-emerald-400' },
+                  { label: 'Notes Logged', value: profile.stats?.notesCount || 0, color: 'text-violet-400' }
+                ].map((item, idx) => (
+                  <div key={idx} className="bg-zinc-950/50 border border-zinc-850/60 p-3 rounded-2xl hover:border-violet-500/30 hover:bg-zinc-950 transition-all duration-300 relative overflow-hidden group hover:shadow-[0_0_15px_rgba(139,92,246,0.05)]">
+                    {/* Glowing flare animation */}
+                    <div className="absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12 group-hover:left-full transition-all duration-1000" />
+                    <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">{item.label}</span>
+                    <span className={`text-sm font-black mt-0.5 block ${item.color} flex items-center gap-1`}>
+                      {item.streak && <Flame className="w-4 h-4 fill-orange-500" />}
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
               </div>
 
               {/* Progress metrics sliders */}
@@ -528,26 +531,48 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* University & Academic Credentials */}
-            <div className="bg-zinc-900/90 border border-zinc-850 p-6 rounded-3xl shadow-2xl space-y-4 text-left">
-              <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 pb-2 border-b border-zinc-850 flex items-center gap-1.5">
-                <GraduationCap className="w-4.5 h-4.5 text-zinc-400" /> Academic Standing
+            {/* University & Academic Credentials Card */}
+            <div className="bg-zinc-900/90 border border-zinc-850 p-6 rounded-3xl shadow-2xl space-y-4 text-left relative overflow-hidden group hover:border-violet-500/20 transition duration-300">
+              <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 pb-2.5 border-b border-zinc-850 flex items-center justify-between">
+                <span className="flex items-center gap-1.5"><GraduationCap className="w-4.5 h-4.5 text-zinc-400" /> Academic Standing</span>
+                <span className="text-[8px] font-black bg-zinc-950 border border-zinc-800 text-zinc-500 px-2 py-0.5 rounded uppercase tracking-wider">Active</span>
               </h3>
               
-              <div className="space-y-3 text-xs">
-                <div className="space-y-0.5">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase">Institution</span>
-                  <span className="font-extrabold text-zinc-350">{university}</span>
-                </div>
-                
-                <div className="space-y-0.5">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase">Course focus</span>
-                  <span className="font-extrabold text-zinc-350">{course}</span>
+              <div className="space-y-4 text-xs">
+                <div className="flex gap-3">
+                  <div className="p-2.5 bg-zinc-950 border border-zinc-850 rounded-2xl text-violet-400 flex items-center justify-center shrink-0">
+                    <Compass className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[9px] font-bold text-zinc-550 block uppercase">Institution</span>
+                    <span className="font-extrabold text-zinc-200 block leading-tight">{university}</span>
+                    <span className="text-[9px] text-zinc-500 block">{department} • Spring 2026 Semester</span>
+                  </div>
                 </div>
 
-                <div className="space-y-0.5">
-                  <span className="text-[9px] font-bold text-zinc-550 block uppercase">Department</span>
-                  <span className="font-extrabold text-zinc-350">{department}</span>
+                <div className="space-y-1.5 pt-1.5 border-t border-zinc-850/60">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-zinc-455">
+                    <span>Degree Completion Progress</span>
+                    <span className={currentAccent.text}>50%</span>
+                  </div>
+                  <div className="h-2 bg-zinc-950 border border-zinc-850 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${currentAccent.bg}`} style={{ width: '50%' }} />
+                  </div>
+                  <div className="flex justify-between items-center text-[8px] text-zinc-550">
+                    <span>Year 2 completed</span>
+                    <span>Year 4 final</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-zinc-850/60">
+                  <span className="text-[9px] font-bold text-zinc-555 block uppercase tracking-wider">Learning Specializations</span>
+                  <div className="flex flex-wrap gap-1">
+                    {favoriteSubjects.map(sub => (
+                      <span key={sub} className="text-[8.5px] font-black bg-zinc-950 border border-zinc-850 text-zinc-400 px-2 py-0.5 rounded-md uppercase">
+                        📘 {sub}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -620,16 +645,45 @@ export default function ProfilePage() {
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           {achievements.filter(a => a.unlocked).slice(0, 4).length === 0 ? (
-                            <div className="col-span-full py-8 text-center border border-dashed border-zinc-850 rounded-2xl text-xs text-zinc-550 bg-zinc-950/20">
-                              Start study sessions to unlock high-tier badges.
+                            /* Premium Empty State Showcase */
+                            <div className="col-span-full py-10 text-center border border-dashed border-zinc-850 rounded-3xl p-6 bg-zinc-950/20 flex flex-col items-center justify-center gap-3">
+                              <div className="p-3 bg-zinc-900/60 border border-zinc-850 rounded-2xl">
+                                <Trophy className="w-8 h-8 text-zinc-650 animate-pulse" />
+                              </div>
+                              <div className="max-w-xs space-y-1">
+                                <p className="text-xs font-black text-zinc-400">Unlock your first premium badge</p>
+                                <p className="text-[10px] text-zinc-550 leading-relaxed">Complete quizzes, generate study notes, and log hours to earn museum-quality collectible medals.</p>
+                              </div>
+                              {/* Next badge lock progress tracker card */}
+                              <div className="bg-zinc-950 border border-zinc-850 p-3 rounded-2xl flex items-center gap-3 w-full max-w-[240px] text-left">
+                                <div className="shrink-0">
+                                  <Streak7Badge size={32} unlocked={false} />
+                                </div>
+                                <div className="flex-1 space-y-0.5">
+                                  <span className="text-[9px] font-black text-zinc-200 block">7-Day Study Marathon</span>
+                                  <div className="flex justify-between items-center text-[8px] text-zinc-500 font-bold">
+                                    <span>Progress: {profile.stats?.streak || 0}/7 days</span>
+                                    <span>{Math.round(((profile.stats?.streak || 0) / 7) * 100)}%</span>
+                                  </div>
+                                  <div className="h-1 bg-zinc-900 border border-zinc-850 rounded-full overflow-hidden">
+                                    <div className="bg-violet-650 h-full rounded-full" style={{ width: `${Math.min(100, Math.round(((profile.stats?.streak || 0) / 7) * 100))}%` }} />
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           ) : (
+                            /* Unlocked achievements cards with spotlights and rare details */
                             achievements.filter(a => a.unlocked).slice(0, 4).map(ach => {
                               const BadgeComp = BADGE_ASSETS[ach.id] || Streak7Badge;
+                              const unlockDate = ach.unlockedAt ? new Date(ach.unlockedAt).toLocaleDateString() : 'Jul 15, 2026';
                               return (
-                                <div key={ach.id} className="bg-zinc-950/40 border border-zinc-850/60 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 hover:border-violet-500/40 hover:shadow-lg transition">
-                                  <BadgeComp size={40} unlocked={true} />
-                                  <span className="text-[10px] font-extrabold text-zinc-200 block truncate w-full">{ach.title}</span>
+                                <div key={ach.id} className="bg-zinc-950 border border-zinc-850/60 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 hover:border-violet-500/40 hover:shadow-[0_0_15px_rgba(139,92,246,0.15)] transition-all duration-300 group hover:scale-[1.03]">
+                                  <div className="relative group-hover:scale-110 transition duration-300">
+                                    <BadgeComp size={48} unlocked={true} />
+                                    <div className="absolute -inset-1 rounded-full bg-violet-500/10 opacity-0 group-hover:opacity-100 blur transition" />
+                                  </div>
+                                  <span className="text-[10px] font-black text-zinc-200 block truncate w-full">{ach.title}</span>
+                                  <span className="text-[8px] font-black text-zinc-550 block">Unlocked {unlockDate}</span>
                                   <span className="text-[7.5px] font-black text-violet-400 uppercase tracking-wider bg-violet-500/5 px-2 py-0.5 rounded border border-violet-500/10">
                                     {ach.tier}
                                   </span>
@@ -640,26 +694,60 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* AI Productivity Insights */}
+                      {/* AI Scholar Productivity Insights */}
                       <div className="bg-zinc-900/50 border border-zinc-850 p-6 rounded-3xl space-y-4">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5 pb-2 border-b border-zinc-850/50">
-                          <Sparkles className="w-4 h-4 text-violet-400" /> AI Scholar Insights & Recommendations
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5 pb-2.5 border-b border-zinc-850/50">
+                          <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" /> AI Scholar Insights & Recommendations
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-zinc-950/60 border border-zinc-850 p-4 rounded-2xl flex gap-3 text-left">
-                            <TrendingUp className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                            <div className="space-y-1">
-                              <span className="text-xs font-bold text-zinc-250 block">Focus Consistency High</span>
-                              <span className="text-[10px] text-zinc-550 block">Your daily study duration has increased 27% compared to last week. Maintain today's focus to unlock the <b>Focus Master</b> tier!</span>
+                          {/* Insight Card 1 */}
+                          <div className="bg-zinc-950/60 border border-zinc-850 p-4 rounded-2xl flex flex-col justify-between gap-3 text-left relative overflow-hidden group hover:border-emerald-500/25 transition">
+                            <div className="flex gap-3">
+                              <TrendingUp className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-black text-zinc-200">Focus Consistency High</span>
+                                  <span className="text-[8px] font-black bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded uppercase">High priority</span>
+                                </div>
+                                <span className="text-[10px] text-zinc-500 block leading-relaxed">Your daily study duration has increased 27% compared to last week. Maintain today's focus to unlock the <b>Focus Master</b> tier!</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-2 border-t border-zinc-900 text-[8.5px] font-bold text-zinc-550">
+                              <span>Confidence: 96%</span>
+                              <span>Est Time: 25 mins</span>
+                              <button 
+                                onClick={() => router.push('/pomodoro')}
+                                className="text-[8.5px] font-black text-emerald-400 hover:text-emerald-300 uppercase tracking-wider"
+                              >
+                                Launch Pomodoro →
+                              </button>
                             </div>
                           </div>
 
-                          <div className="bg-zinc-950/60 border border-zinc-850 p-4 rounded-2xl flex gap-3 text-left">
-                            <Target className="w-5 h-5 text-violet-400 shrink-0 mt-0.5" />
-                            <div className="space-y-1">
-                              <span className="text-xs font-bold text-zinc-250 block">Level Up Imminent</span>
-                              <span className="text-[10px] text-zinc-550 block">You are only <b>{xpUntilNext.toLocaleString()} XP</b> away from Level {level + 1}. complete a quick practice quiz to level up.</span>
+                          {/* Insight Card 2 */}
+                          <div className="bg-zinc-950/60 border border-zinc-850 p-4 rounded-2xl flex flex-col justify-between gap-3 text-left relative overflow-hidden group hover:border-violet-500/25 transition">
+                            <div className="flex gap-3">
+                              <Target className="w-5 h-5 text-violet-400 shrink-0 mt-0.5" />
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-black text-zinc-200">Level Up Imminent</span>
+                                  <span className="text-[8px] font-black bg-violet-500/10 border border-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded uppercase">+500 XP reward</span>
+                                </div>
+                                <span className="text-[10px] text-zinc-550 block leading-relaxed">You are only <b>{xpUntilNext.toLocaleString()} XP</b> away from Level {level + 1}. Complete a quick practice quiz to level up.</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-2 border-t border-zinc-900 text-[8.5px] font-bold text-zinc-550">
+                              <span>Confidence: 98%</span>
+                              <span>Est Time: 10 mins</span>
+                              <button 
+                                onClick={() => router.push('/quizzes')}
+                                className="text-[8.5px] font-black text-violet-400 hover:text-violet-300 uppercase tracking-wider"
+                              >
+                                Start Quiz →
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -667,24 +755,32 @@ export default function ProfilePage() {
 
                       {/* Learning Journey Timeline */}
                       <div className="bg-zinc-900/50 border border-zinc-850 p-6 rounded-3xl space-y-5 text-left">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5 pb-2 border-b border-zinc-850/50">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5 pb-2.5 border-b border-zinc-850/50">
                           <History className="w-4.5 h-4.5 text-pink-400" /> Learning Timeline Journey
                         </h3>
 
-                        <div className="relative border-l border-zinc-850 pl-5 ml-2.5 space-y-6">
+                        <div className="relative border-l border-zinc-850 pl-6 ml-3 space-y-6">
                           {[
-                            { title: 'Joined StudySync AI Workspace', desc: 'Initialized learning metrics tracking', date: 'Jul 01, 2026', color: 'bg-blue-400' },
-                            { title: 'Completed First Practice Quiz', desc: 'Scored 90% in Computer Systems quiz', date: 'Jul 06, 2026', color: 'bg-emerald-400' },
-                            { title: 'Unlocked Streak Master Badge', desc: 'Achieved 7 consecutive study days', date: 'Jul 13, 2026', color: 'bg-amber-400' },
-                            { title: 'Reached Diamond League Arena', desc: 'Earned 3,500 weekly XP points', date: 'Yesterday', color: 'bg-violet-400' }
-                          ].map((item, idx) => (
-                            <div key={idx} className="relative text-xs">
-                              <div className={`absolute -left-[26px] top-1 w-3 h-3 rounded-full border-2 border-zinc-950 ${item.color} shadow-lg`} />
-                              <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest block">{item.date}</span>
-                              <span className="font-extrabold text-zinc-250 block mt-0.5">{item.title}</span>
-                              <span className="text-[10px] text-zinc-500 block">{item.desc}</span>
-                            </div>
-                          ))}
+                            { title: 'Joined StudySync AI Workspace', desc: 'Initialized learning metrics tracking', date: 'Jul 01, 2026', color: 'bg-blue-500 border-blue-400/80 shadow-[0_0_10px_rgba(59,130,246,0.4)]', icon: Globe },
+                            { title: 'Completed First Practice Quiz', desc: 'Scored 90% in Computer Systems quiz', date: 'Jul 06, 2026', color: 'bg-emerald-500 border-emerald-400/80 shadow-[0_0_10px_rgba(16,185,129,0.4)]', icon: Check },
+                            { title: 'Unlocked Streak Master Badge', desc: 'Achieved 7 consecutive study days', date: 'Jul 13, 2026', color: 'bg-amber-500 border-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.4)]', icon: Flame },
+                            { title: 'Reached Diamond League Arena', desc: 'Earned 3,500 weekly XP points', date: 'Yesterday', color: 'bg-violet-500 border-violet-400/80 shadow-[0_0_10px_rgba(139,92,246,0.4)]', icon: Trophy }
+                          ].map((item, idx) => {
+                            const IconComp = item.icon;
+                            return (
+                              <div key={idx} className="relative text-xs group hover:translate-x-1 transition duration-300">
+                                {/* Connector Node */}
+                                <div className={`absolute -left-[36px] top-1 w-6 h-6 rounded-full border-2 border-zinc-900 flex items-center justify-center text-white shrink-0 ${item.color} group-hover:scale-110 transition duration-300`}>
+                                  <IconComp className="w-3 h-3 text-zinc-100" />
+                                </div>
+                                <div className="bg-zinc-955/40 border border-zinc-850 p-4 rounded-2xl space-y-1">
+                                  <span className="text-[8px] font-black text-zinc-550 uppercase tracking-widest block">{item.date}</span>
+                                  <span className="font-extrabold text-zinc-200 block">{item.title}</span>
+                                  <span className="text-[10px] text-zinc-500 block leading-relaxed">{item.desc}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -954,20 +1050,20 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Display name */}
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider">Display Name</label>
+                            <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-wider">Display Name</label>
                             <input
                               type="text"
                               value={displayName}
                               onChange={(e) => setDisplayName(e.target.value)}
                               maxLength={50}
                               placeholder="Your full display name"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500"
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition"
                             />
                           </div>
 
                           {/* Timezone */}
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider">Timezone</label>
+                            <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-wider">Timezone</label>
                             <select
                               value={timezone}
                               onChange={(e) => setTimezone(e.target.value)}
@@ -981,32 +1077,32 @@ export default function ProfilePage() {
 
                           {/* Custom Learning Title */}
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider">Learning Title</label>
+                            <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-wider">Learning Title</label>
                             <input
                               type="text"
                               value={learningTitle}
                               onChange={(e) => setLearningTitle(e.target.value)}
                               placeholder="e.g. Focus Master"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500"
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition"
                             />
                           </div>
 
                           {/* Custom Status Message */}
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider">Status Message</label>
+                            <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-wider">Status Message</label>
                             <input
                               type="text"
                               value={statusMessage}
                               onChange={(e) => setStatusMessage(e.target.value)}
                               placeholder="e.g. Preparing for midterm"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500"
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition"
                             />
                           </div>
                         </div>
 
                         {/* Bio */}
                         <div className="flex flex-col gap-1.5 pt-2">
-                          <div className="flex justify-between text-[10px] font-bold text-zinc-450 uppercase tracking-wider">
+                          <div className="flex justify-between text-[10px] font-bold text-zinc-455 uppercase tracking-wider">
                             <label>Biography summary</label>
                             <span className={bio.length > 130 ? 'text-amber-500' : 'text-zinc-550'}>
                               {bio.length} / 150
@@ -1018,7 +1114,7 @@ export default function ProfilePage() {
                             maxLength={150}
                             rows={3}
                             placeholder="Write a short summary about your study goals..."
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 resize-none"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 resize-none focus:ring-1 focus:ring-violet-500/20 transition"
                           />
                         </div>
                       </div>
@@ -1031,35 +1127,35 @@ export default function ProfilePage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider">University</label>
+                            <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-wider">University</label>
                             <input
                               type="text"
                               value={university}
                               onChange={(e) => setUniversity(e.target.value)}
                               placeholder="e.g. Stanford University"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500"
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition"
                             />
                           </div>
 
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider">Course Focus</label>
+                            <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-wider">Course Focus</label>
                             <input
                               type="text"
                               value={course}
                               onChange={(e) => setCourse(e.target.value)}
                               placeholder="e.g. Physics Major"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500"
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition"
                             />
                           </div>
 
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider">Department</label>
+                            <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-wider">Department</label>
                             <input
                               type="text"
                               value={department}
                               onChange={(e) => setDepartment(e.target.value)}
                               placeholder="e.g. Sciences"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500"
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition"
                             />
                           </div>
                         </div>
@@ -1088,7 +1184,7 @@ export default function ProfilePage() {
                               value={username}
                               onChange={(e) => setUsername(e.target.value)}
                               placeholder="new_username"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500"
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/20 transition"
                             />
                           </div>
                           
@@ -1108,7 +1204,7 @@ export default function ProfilePage() {
                           }`}>
                             {usernameStatus === 'checking' ? (
                               <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-550" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-555" />
                                 <span>Verifying availability...</span>
                               </>
                             ) : (
