@@ -22,21 +22,6 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
 
   validate(accessToken: string, refreshToken: string, profile: any): any {
     try {
-      console.log(
-        '[GithubStrategy] Entering validate. Profile ID:',
-        profile.id,
-      );
-      console.log(
-        '[GithubStrategy] Profile data:',
-        JSON.stringify({
-          id: profile.id,
-          emails: profile.emails,
-          displayName: profile.displayName,
-          username: profile.username,
-          photos: profile.photos,
-        }),
-      );
-
       const { displayName, username, emails, photos, id } = profile;
       const email = emails?.[0]?.value || `${username}@github.com`;
       const names = (displayName || username || '').split(' ');
@@ -49,7 +34,6 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         avatarUrl: photos?.[0]?.value || null,
       };
 
-      console.log('[GithubStrategy] Successfully mapped user:', user);
       return user;
     } catch (err: any) {
       console.error(

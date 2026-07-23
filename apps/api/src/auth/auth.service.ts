@@ -171,49 +171,22 @@ export class AuthService {
     lastName: string;
     avatarUrl: string | null;
   }) {
-    console.log(
-      '[AuthService] Entering validateOAuth. Input profile:',
-      JSON.stringify(profile),
-    );
     try {
-      console.log(
-        '[AuthService] Step 1: Database lookup for existing social account started...',
-      );
       const socialAccount = await this.prisma.socialAccount.findUnique({
         where: { providerId: profile.providerId },
         include: { user: true },
       });
-      console.log(
-        '[AuthService] Database lookup completed. socialAccount found:',
-        !!socialAccount,
-      );
 
       let user;
 
       if (socialAccount) {
-        console.log(
-          '[AuthService] Existing user found via socialAccount link. UserId:',
-          socialAccount.userId,
-        );
         user = socialAccount.user;
       } else {
-        console.log(
-          '[AuthService] No socialAccount link exists. Step 2: Database lookup for user by email:',
-          profile.email,
-        );
         user = await this.prisma.user.findUnique({
           where: { email: profile.email },
         });
-        console.log(
-          '[AuthService] Email lookup completed. User found:',
-          !!user,
-        );
 
         if (!user) {
-          console.log(
-            '[AuthService] Step 3: Creating new user and profile for email:',
-            profile.email,
-          );
           user = await this.prisma.user.create({
             data: {
               email: profile.email,
@@ -233,14 +206,7 @@ export class AuthService {
               },
             },
           });
-          console.log(
-            '[AuthService] New user created successfully. UserId:',
-            user.id,
-          );
         } else {
-          console.log(
-            '[AuthService] Step 4: Existing email match found. Linking provider account...',
-          );
           await this.prisma.socialAccount.create({
             data: {
               userId: user.id,
@@ -248,16 +214,10 @@ export class AuthService {
               providerId: profile.providerId,
             },
           });
-          console.log('[AuthService] Social account linked successfully.');
         }
       }
 
-      console.log(
-        '[AuthService] Step 5: Generating JWT tokens for user ID:',
-        user.id,
-      );
       const tokens = await this.generateTokens(user.id, user.email, user.role);
-      console.log('[AuthService] validateOAuth completed successfully.');
       return tokens;
     } catch (err: any) {
       console.error(

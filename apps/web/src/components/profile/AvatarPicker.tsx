@@ -69,13 +69,13 @@ export default function AvatarPicker({ currentAvatarUrl, onSelectAvatar }: Avata
   return (
     <div className="space-y-4">
       {/* Category Tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin border-b border-zinc-800">
+      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-zinc-900">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-              activeCategory === cat ? 'bg-violet-650 text-white shadow' : 'bg-zinc-900/60 text-zinc-400 hover:text-zinc-200'
+            className={`px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer focus:outline-none ${
+              activeCategory === cat ? 'bg-zinc-905 text-white border border-zinc-800' : 'bg-zinc-950/40 text-zinc-500 hover:text-zinc-300'
             }`}
           >
             {cat}
@@ -90,21 +90,21 @@ export default function AvatarPicker({ currentAvatarUrl, onSelectAvatar }: Avata
           return (
             <div
               key={avatar.name}
-              className={`relative rounded-2xl p-2 bg-zinc-950 border flex flex-col items-center justify-between group transition-all duration-300 ${
+              className={`relative rounded-[20px] p-2 bg-zinc-950/40 border flex flex-col items-center justify-between group transition-all duration-300 ${
                 isSelected 
-                  ? 'border-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.15)] bg-violet-950/5' 
-                  : 'border-zinc-850 hover:border-zinc-700 hover:bg-zinc-900/40'
+                  ? 'border-violet-500/25 shadow-md bg-violet-950/5' 
+                  : 'border-zinc-900 hover:border-zinc-805 hover:bg-zinc-950/80'
               }`}
             >
               {/* Badge for locks */}
               {!avatar.isFree && (
-                <div className="absolute top-2 right-2 bg-zinc-900 border border-zinc-800/80 p-1 rounded-lg text-zinc-500">
+                <div className="absolute top-2 right-2 bg-zinc-950/80 border border-zinc-900 p-1 rounded-lg text-zinc-650">
                   <Lock className="w-3 h-3" />
                 </div>
               )}
 
               {/* Avatar Image */}
-              <div className="relative w-14 h-14 rounded-full overflow-hidden bg-zinc-900/50 mt-1 mb-2">
+              <div className="relative w-14 h-14 rounded-full overflow-hidden bg-zinc-950/50 mt-1 mb-2">
                 <img
                   src={avatar.url}
                   alt={avatar.name}
@@ -113,7 +113,7 @@ export default function AvatarPicker({ currentAvatarUrl, onSelectAvatar }: Avata
               </div>
 
               {/* Avatar Name */}
-              <span className="text-[10px] font-bold text-zinc-450 block truncate w-full text-center px-1 mb-1">
+              <span className="text-[10px] font-black text-zinc-500 block truncate w-full text-center px-1 mb-1.5 uppercase tracking-wider">
                 {avatar.name}
               </span>
 
@@ -123,10 +123,10 @@ export default function AvatarPicker({ currentAvatarUrl, onSelectAvatar }: Avata
                   type="button"
                   onClick={() => onSelectAvatar(avatar.url)}
                   disabled={isSelected}
-                  className={`w-full py-1 text-[9px] font-extrabold rounded-lg flex items-center justify-center gap-0.5 transition cursor-pointer ${
+                  className={`w-full py-2 text-[8.5px] font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-0.5 transition duration-200 cursor-pointer focus:outline-none ${
                     isSelected
-                      ? 'bg-violet-500/20 text-violet-300'
-                      : 'bg-zinc-900 hover:bg-violet-650 hover:text-white text-zinc-300'
+                      ? 'bg-violet-500/10 text-violet-400'
+                      : 'bg-zinc-950 border border-zinc-900 hover:border-zinc-800 text-zinc-300'
                   }`}
                 >
                   {isSelected ? (
@@ -139,7 +139,7 @@ export default function AvatarPicker({ currentAvatarUrl, onSelectAvatar }: Avata
                   )}
                 </button>
               ) : (
-                <div className="w-full py-1 text-[9px] font-bold rounded-lg bg-zinc-900/40 text-zinc-650 flex items-center justify-center select-none cursor-not-allowed">
+                <div className="w-full py-2 text-[8.5px] font-black uppercase tracking-wider rounded-xl bg-zinc-950/10 border border-zinc-900 text-zinc-600 flex items-center justify-center select-none cursor-not-allowed">
                   Locked
                 </div>
               )}

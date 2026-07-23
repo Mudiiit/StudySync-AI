@@ -12,12 +12,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     const secret =
       configService.get<string>('JWT_ACCESS_SECRET') || 'access_secret';
-    console.log(
-      '[JwtStrategy] Loaded access secret length:',
-      secret.length,
-      'starts with:',
-      secret.substring(0, 5),
-    );
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -26,7 +20,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: { sub: string; email: string; role: string }) {
-    console.log('[JwtStrategy] Validating payload:', payload);
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       select: {

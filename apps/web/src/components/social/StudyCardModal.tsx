@@ -117,7 +117,7 @@ export default function StudyCardModal({
   <text x="50" y="200" class="label">🔥 Learning Streak</text>
   <text x="350" y="200" text-anchor="end" class="val">${streak} Days</text>
   <line x1="50" y1="215" x2="350" y2="215" class="divider"/>
-
+ 
   <text x="50" y="250" class="label">⏱ Study Hours</text>
   <text x="350" y="250" text-anchor="end" class="val">${studyHours} Hours</text>
   <line x1="50" y1="265" x2="350" y2="265" class="divider"/>
@@ -157,7 +157,6 @@ export default function StudyCardModal({
 ⏱ ${studyHours} Hours Focused
 🏆 Weekly Rank #${weeklyRank || 'Unranked'}
 📖 ${notesCount} Notes
-🧠 ${flashcardsCount} Flashcards
 ━━━━━━━━━━━━━━━━━━`;
     
     navigator.clipboard.writeText(text);
@@ -165,49 +164,50 @@ export default function StudyCardModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm overflow-hidden flex flex-col p-6 space-y-6 relative shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-zinc-950/90 border border-zinc-800/80 rounded-[32px] w-full max-w-sm overflow-hidden flex flex-col p-6 space-y-6 relative shadow-2xl backdrop-blur-xl">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 p-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
+          className="absolute right-5 top-5 p-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition duration-200 cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
 
         <div className="text-center space-y-1 mt-2">
-          <h3 className="font-extrabold text-zinc-100 text-base">Your Study Card</h3>
-          <p className="text-zinc-550 text-[10px]">Export a clean vector SVG or print-friendly PDF card</p>
+          <h3 className="font-black text-zinc-100 text-base">Your Study Card</h3>
+          <p className="text-zinc-500 text-[10px] font-semibold">Export vector SVG or print-friendly PDF cards</p>
         </div>
 
-        {/* Visual Card Card Preview */}
-        <div className="bg-gradient-to-br from-zinc-950 via-zinc-950/90 to-zinc-900 border border-zinc-800/80 rounded-2xl p-6 text-center space-y-5 shadow-inner relative">
-          <div className="absolute right-4 top-4 text-violet-500/25">
+        {/* Visual Card Card Preview with elegant glassmorphism styling */}
+        <div className="bg-gradient-to-b from-zinc-900/60 to-zinc-950 border border-zinc-900 rounded-[24px] p-6 text-center space-y-5 shadow-inner relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-650/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute right-4 top-4 text-violet-500/20">
             <Share2 className="w-8 h-8" />
           </div>
           
           <div>
-            <span className="text-sm font-black text-zinc-150 block">{displayName}</span>
-            <span className="text-[10px] text-zinc-500 block mt-0.5">@{username || 'learner'}</span>
+            <span className="text-sm font-black text-zinc-200 block">{displayName}</span>
+            <span className="text-[10px] text-zinc-550 block mt-0.5">@{username || 'learner'}</span>
           </div>
 
-          <div className="inline-block px-3 py-1 bg-violet-650/10 border border-violet-500/20 text-violet-400 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
+          <div className="inline-block px-3 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[9px] font-black rounded-full uppercase tracking-widest">
             Level {level} • Scholar
           </div>
 
           <div className="space-y-2.5 text-xs text-left">
-            <div className="flex justify-between items-center pb-1 border-b border-zinc-850/30 text-zinc-400">
+            <div className="flex justify-between items-center pb-1 border-b border-zinc-900/40 text-zinc-400">
               <span className="flex items-center gap-1.5 text-zinc-500"><Flame className="w-3.5 h-3.5 text-orange-500" /> Streak</span>
               <span className="font-bold text-zinc-200">{streak} Days</span>
             </div>
-            <div className="flex justify-between items-center pb-1 border-b border-zinc-850/30 text-zinc-400">
+            <div className="flex justify-between items-center pb-1 border-b border-zinc-900/40 text-zinc-400">
               <span className="flex items-center gap-1.5 text-zinc-500"><Clock className="w-3.5 h-3.5 text-blue-400" /> Hours</span>
               <span className="font-bold text-zinc-200">{studyHours} h</span>
             </div>
-            <div className="flex justify-between items-center pb-1 border-b border-zinc-850/30 text-zinc-400">
+            <div className="flex justify-between items-center pb-1 border-b border-zinc-900/40 text-zinc-400">
               <span className="flex items-center gap-1.5 text-zinc-500"><Trophy className="w-3.5 h-3.5 text-yellow-500" /> Weekly Rank</span>
               <span className="font-bold text-zinc-200">#{weeklyRank || 'Unranked'}</span>
             </div>
-            <div className="flex justify-between items-center pb-1 border-b border-zinc-850/30 text-zinc-400">
+            <div className="flex justify-between items-center pb-1 border-b border-zinc-900/40 text-zinc-400">
               <span className="flex items-center gap-1.5 text-zinc-500"><FileText className="w-3.5 h-3.5 text-violet-400" /> Notes</span>
               <span className="font-bold text-zinc-200">{notesCount}</span>
             </div>
@@ -222,26 +222,26 @@ export default function StudyCardModal({
         <div className="grid grid-cols-3 gap-2.5">
           <button
             onClick={handleExportSVG}
-            className="flex flex-col items-center gap-1.5 p-3 bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 rounded-xl transition cursor-pointer text-zinc-300"
+            className="flex flex-col items-center gap-1.5 p-3 bg-zinc-950/60 border border-zinc-900 hover:border-zinc-800 rounded-xl transition duration-200 cursor-pointer text-zinc-300"
           >
             <Download className="w-4 h-4 text-violet-400" />
-            <span className="text-[9px] font-bold uppercase tracking-wider">SVG</span>
+            <span className="text-[9px] font-black uppercase tracking-widest">SVG</span>
           </button>
           
           <button
             onClick={handleExportPDF}
-            className="flex flex-col items-center gap-1.5 p-3 bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 rounded-xl transition cursor-pointer text-zinc-300"
+            className="flex flex-col items-center gap-1.5 p-3 bg-zinc-950/60 border border-zinc-900 hover:border-zinc-800 rounded-xl transition duration-200 cursor-pointer text-zinc-300"
           >
             <FileText className="w-4 h-4 text-blue-400" />
-            <span className="text-[9px] font-bold uppercase tracking-wider">PDF</span>
+            <span className="text-[9px] font-black uppercase tracking-widest">PDF</span>
           </button>
 
           <button
             onClick={handleCopyText}
-            className="flex flex-col items-center gap-1.5 p-3 bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 rounded-xl transition cursor-pointer text-zinc-300"
+            className="flex flex-col items-center gap-1.5 p-3 bg-zinc-950/60 border border-zinc-900 hover:border-zinc-800 rounded-xl transition duration-200 cursor-pointer text-zinc-300"
           >
             <Copy className="w-4 h-4 text-emerald-400" />
-            <span className="text-[9px] font-bold uppercase tracking-wider">Copy</span>
+            <span className="text-[9px] font-black uppercase tracking-widest">Copy</span>
           </button>
         </div>
       </div>

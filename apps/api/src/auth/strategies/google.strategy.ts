@@ -22,20 +22,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
   validate(accessToken: string, refreshToken: string, profile: any): any {
     try {
-      console.log(
-        '[GoogleStrategy] Entering validate. Profile ID:',
-        profile.id,
-      );
-      console.log(
-        '[GoogleStrategy] Profile data:',
-        JSON.stringify({
-          id: profile.id,
-          emails: profile.emails,
-          name: profile.name,
-          photos: profile.photos,
-        }),
-      );
-
       const { name, emails, photos, id } = profile;
       const email = emails?.[0]?.value;
       if (!email) {
@@ -51,7 +37,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         avatarUrl: photos?.[0]?.value || null,
       };
 
-      console.log('[GoogleStrategy] Successfully mapped user:', user);
       return user;
     } catch (err: any) {
       console.error(

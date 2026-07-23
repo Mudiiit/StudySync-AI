@@ -227,7 +227,24 @@ export class ProfileService {
 
   async updateProfile(
     userId: string,
-    dto: { displayName?: string; bio?: string; timezone?: string },
+    dto: {
+      displayName?: string;
+      bio?: string;
+      timezone?: string;
+      institution?: string;
+      degree?: string;
+      department?: string;
+      branch?: string;
+      program?: string;
+      campus?: string;
+      admissionYear?: number;
+      expectedGraduationYear?: number;
+      currentSemester?: number;
+      currentAcademicYear?: number;
+      currentSession?: string;
+      totalSemesters?: number;
+      specializations?: string[];
+    },
   ) {
     if (dto.displayName && dto.displayName.length > 50) {
       throw new BadRequestException(
@@ -238,13 +255,33 @@ export class ProfileService {
       throw new BadRequestException('Bio must not exceed 150 characters');
     }
 
+    if (dto.currentSemester && dto.totalSemesters && dto.currentSemester > dto.totalSemesters) {
+      throw new BadRequestException('Current semester cannot exceed total semesters');
+    }
+
+    if (dto.admissionYear && dto.expectedGraduationYear && dto.expectedGraduationYear < dto.admissionYear) {
+      throw new BadRequestException('Expected graduation year cannot be before admission year');
+    }
+
     return this.prisma.profile.update({
       where: { userId },
       data: {
-        displayName:
-          dto.displayName !== undefined ? dto.displayName : undefined,
+        displayName: dto.displayName !== undefined ? dto.displayName : undefined,
         bio: dto.bio !== undefined ? dto.bio : undefined,
         timezone: dto.timezone !== undefined ? dto.timezone : undefined,
+        institution: dto.institution !== undefined ? dto.institution : undefined,
+        degree: dto.degree !== undefined ? dto.degree : undefined,
+        department: dto.department !== undefined ? dto.department : undefined,
+        branch: dto.branch !== undefined ? dto.branch : undefined,
+        program: dto.program !== undefined ? dto.program : undefined,
+        campus: dto.campus !== undefined ? dto.campus : undefined,
+        admissionYear: dto.admissionYear !== undefined ? dto.admissionYear : undefined,
+        expectedGraduationYear: dto.expectedGraduationYear !== undefined ? dto.expectedGraduationYear : undefined,
+        currentSemester: dto.currentSemester !== undefined ? dto.currentSemester : undefined,
+        currentAcademicYear: dto.currentAcademicYear !== undefined ? dto.currentAcademicYear : undefined,
+        currentSession: dto.currentSession !== undefined ? dto.currentSession : undefined,
+        totalSemesters: dto.totalSemesters !== undefined ? dto.totalSemesters : undefined,
+        specializations: dto.specializations !== undefined ? dto.specializations : undefined,
       },
     });
   }

@@ -46,6 +46,19 @@ export interface UserProfile {
   stats: ProfileStats | null;
   isOwner?: boolean;
   status?: string;
+  institution?: string | null;
+  degree?: string | null;
+  department?: string | null;
+  branch?: string | null;
+  program?: string | null;
+  campus?: string | null;
+  admissionYear?: number | null;
+  expectedGraduationYear?: number | null;
+  currentSemester?: number | null;
+  currentAcademicYear?: number | null;
+  currentSession?: string | null;
+  totalSemesters?: number | null;
+  specializations?: string[];
 }
 
 class ProfileService {
@@ -64,7 +77,24 @@ class ProfileService {
     return res.data;
   }
 
-  async updateProfile(dto: { displayName?: string; bio?: string; timezone?: string }): Promise<UserProfile> {
+  async updateProfile(dto: {
+    displayName?: string;
+    bio?: string;
+    timezone?: string;
+    institution?: string;
+    degree?: string;
+    department?: string;
+    branch?: string;
+    program?: string;
+    campus?: string;
+    admissionYear?: number;
+    expectedGraduationYear?: number;
+    currentSemester?: number;
+    currentAcademicYear?: number;
+    currentSession?: string;
+    totalSemesters?: number;
+    specializations?: string[];
+  }): Promise<UserProfile> {
     const res = await api.patch('/profile', dto);
     return res.data;
   }

@@ -57,33 +57,17 @@ export class AuthController {
   @Get('oauth/google/callback')
   @UseGuards(GoogleOauthGuard)
   async googleAuthCallback(@Req() req: any, @Res() res: Response) {
-    console.log(
-      '[AuthController] Entering googleAuthCallback. User object from request:',
-      JSON.stringify(req.user),
-    );
     try {
-      console.log('[AuthController] Invoking authService.validateOAuth...');
       const tokens = await this.authService.validateOAuth(req.user);
-      console.log(
-        '[AuthController] validateOAuth succeeded. Generating redirects...',
-      );
       const frontendUrl =
         this.configService.get<string>('FRONTEND_URL') ||
         'http://localhost:3000';
       const access = encodeURIComponent(tokens.accessToken);
       const refresh = encodeURIComponent(tokens.refreshToken);
-      console.log(
-        '[AuthController] Redirecting to frontend callback with tokens',
-      );
       return res.redirect(
         `${frontendUrl}/auth/callback?accessToken=${access}&refreshToken=${refresh}`,
       );
     } catch (err: any) {
-      console.error(
-        '[AuthController] ERROR in googleAuthCallback:',
-        err.message,
-        err.stack,
-      );
       const frontendUrl =
         this.configService.get<string>('FRONTEND_URL') ||
         'http://localhost:3000';
@@ -100,33 +84,17 @@ export class AuthController {
   @Get('oauth/github/callback')
   @UseGuards(GithubOauthGuard)
   async githubAuthCallback(@Req() req: any, @Res() res: Response) {
-    console.log(
-      '[AuthController] Entering githubAuthCallback. User object from request:',
-      JSON.stringify(req.user),
-    );
     try {
-      console.log('[AuthController] Invoking authService.validateOAuth...');
       const tokens = await this.authService.validateOAuth(req.user);
-      console.log(
-        '[AuthController] validateOAuth succeeded. Generating redirects...',
-      );
       const frontendUrl =
         this.configService.get<string>('FRONTEND_URL') ||
         'http://localhost:3000';
       const access = encodeURIComponent(tokens.accessToken);
       const refresh = encodeURIComponent(tokens.refreshToken);
-      console.log(
-        '[AuthController] Redirecting to frontend callback with tokens',
-      );
       return res.redirect(
         `${frontendUrl}/auth/callback?accessToken=${access}&refreshToken=${refresh}`,
       );
     } catch (err: any) {
-      console.error(
-        '[AuthController] ERROR in githubAuthCallback:',
-        err.message,
-        err.stack,
-      );
       const frontendUrl =
         this.configService.get<string>('FRONTEND_URL') ||
         'http://localhost:3000';
