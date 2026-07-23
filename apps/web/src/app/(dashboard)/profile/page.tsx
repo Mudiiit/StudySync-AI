@@ -4,10 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   User, Shield, Sparkles, Image as ImageIcon, Check, Loader2, AlertCircle, 
-  Calendar, MapPin, Eye, Lock, Globe, MessageSquare, Trophy, Flame, 
-  BookOpen, Brain, Clock, Upload, Target, Award, Activity, History, 
-  Compass, Heart, Share2, Search, Briefcase, GraduationCap, TrendingUp,
-  Settings, LogOut
+  Globe, Trophy, Flame, Target, Award, Activity, History, 
+  Compass, Share2, GraduationCap, TrendingUp, Settings
 } from 'lucide-react';
 import profileService, { UserProfile } from '@/services/profile';
 import achievementsService, { UserAchievement } from '@/services/achievements';
@@ -389,9 +387,12 @@ export default function ProfilePage() {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(139,92,246,0.03),transparent_40%)]" />
               
               {/* Level XP Ring & Avatar Frame */}
-              <div className="relative w-32 h-32 flex items-center justify-center mb-4">
+              <div className="relative w-32 h-32 flex items-center justify-center mb-4 group transition duration-500 hover:scale-105">
+                {/* Breathing back glow aura */}
+                <div className={`absolute inset-4 rounded-full blur-xl opacity-25 ${currentAccent.glow} animate-pulse pointer-events-none`} />
+                
                 {/* SVG Progress Ring */}
-                <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <svg className="absolute w-full h-full -rotate-90 filter drop-shadow-[0_0_4px_rgba(0,0,0,0.4)]" viewBox="0 0 100 100">
                   <circle 
                     cx="50" 
                     cy="50" 
@@ -403,11 +404,12 @@ export default function ProfilePage() {
                     cx="50" 
                     cy="50" 
                     r="44" 
-                    className={`fill-none transition-all duration-1000 ${currentAccent.ring}`} 
+                    className={`fill-none ${currentAccent.ring}`} 
                     strokeWidth="3.8" 
                     strokeDasharray="276"
                     strokeDashoffset={276 - (276 * xpPercentage) / 100}
                     strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
                   />
                 </svg>
 
@@ -515,7 +517,7 @@ export default function ProfilePage() {
                     <span className={currentAccent.text}>88%</span>
                   </div>
                   <div className="h-1.5 bg-zinc-950 border border-zinc-850 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${currentAccent.bg}`} style={{ width: '88%' }} />
+                    <div className={`h-full rounded-full ${currentAccent.bg}`} style={{ width: '88%', transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }} />
                   </div>
                 </div>
 
@@ -525,7 +527,7 @@ export default function ProfilePage() {
                     <span className="text-pink-400">76%</span>
                   </div>
                   <div className="h-1.5 bg-zinc-950 border border-zinc-850 rounded-full overflow-hidden">
-                    <div className="h-full bg-pink-500 rounded-full" style={{ width: '76%' }} />
+                    <div className="h-full bg-pink-500 rounded-full" style={{ width: '76%', transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }} />
                   </div>
                 </div>
               </div>
@@ -759,7 +761,7 @@ export default function ProfilePage() {
                           <History className="w-4.5 h-4.5 text-pink-400" /> Learning Timeline Journey
                         </h3>
 
-                        <div className="relative border-l border-zinc-850 pl-6 ml-3 space-y-6">
+                         <div className="relative border-l border-dashed border-zinc-800/80 pl-6 ml-3 space-y-8">
                           {[
                             { title: 'Joined StudySync AI Workspace', desc: 'Initialized learning metrics tracking', date: 'Jul 01, 2026', color: 'bg-blue-500 border-blue-400/80 shadow-[0_0_10px_rgba(59,130,246,0.4)]', icon: Globe },
                             { title: 'Completed First Practice Quiz', desc: 'Scored 90% in Computer Systems quiz', date: 'Jul 06, 2026', color: 'bg-emerald-500 border-emerald-400/80 shadow-[0_0_10px_rgba(16,185,129,0.4)]', icon: Check },
@@ -770,10 +772,10 @@ export default function ProfilePage() {
                             return (
                               <div key={idx} className="relative text-xs group hover:translate-x-1 transition duration-300">
                                 {/* Connector Node */}
-                                <div className={`absolute -left-[36px] top-1 w-6 h-6 rounded-full border-2 border-zinc-900 flex items-center justify-center text-white shrink-0 ${item.color} group-hover:scale-110 transition duration-300`}>
+                                <div className={`absolute -left-[36px] top-1.5 w-6 h-6 rounded-full border-2 border-zinc-900 flex items-center justify-center text-white shrink-0 ${item.color} group-hover:scale-110 transition duration-300`}>
                                   <IconComp className="w-3 h-3 text-zinc-100" />
                                 </div>
-                                <div className="bg-zinc-955/40 border border-zinc-850 p-4 rounded-2xl space-y-1">
+                                <div className="bg-zinc-955/40 border border-zinc-850 p-4 rounded-2xl space-y-1 hover:border-zinc-800 transition duration-300">
                                   <span className="text-[8px] font-black text-zinc-550 uppercase tracking-widest block">{item.date}</span>
                                   <span className="font-extrabold text-zinc-200 block">{item.title}</span>
                                   <span className="text-[10px] text-zinc-500 block leading-relaxed">{item.desc}</span>
