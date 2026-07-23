@@ -6,9 +6,10 @@ import { GroupsController } from './groups.controller';
 import { ChallengesController } from './challenges.controller';
 import { NotebooksController } from './notebooks.controller';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule, NotificationsModule],
   controllers: [
     FriendsController,
     GroupsController,

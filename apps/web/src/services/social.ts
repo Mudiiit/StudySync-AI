@@ -176,6 +176,11 @@ const socialService = {
     return res.data;
   },
 
+  cancelRequest: async (id: string): Promise<any> => {
+    const res = await api.delete(`/social/friends/request/${id}`);
+    return res.data;
+  },
+
   blockUser: async (blockedId: string): Promise<any> => {
     const res = await api.post(`/social/friends/block/${blockedId}`);
     return res.data;

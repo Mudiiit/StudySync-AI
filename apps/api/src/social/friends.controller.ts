@@ -46,12 +46,15 @@ function calculateStreakFromSessions(sessions: any[]): number {
   return streak;
 }
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Controller('social')
 @UseGuards(JwtAuthGuard)
 export class FriendsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly statusService: StatusService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ==========================================
@@ -395,14 +398,12 @@ export class FriendsController {
     const senderProfile = await this.prisma.profile.findUnique({
       where: { userId: senderId },
     });
-    await this.prisma.notification.create({
-      data: {
-        userId: receiverId,
-        title: 'New Friend Request',
-        message: `@${senderProfile?.username || 'someone'} sent you a friend request.`,
-        type: 'FRIEND_REQUEST',
-      },
-    });
+    await this.notificationsService.sendNotification(
+      receiverId,
+      'New Friend Request',
+      `@${senderProfile?.username || 'someone'} sent you a friend request.`,
+      'FRIEND_REQUEST',
+    );
 
     return newReq;
   }
@@ -435,14 +436,12 @@ export class FriendsController {
     const receiverProfile = await this.prisma.profile.findUnique({
       where: { userId },
     });
-    await this.prisma.notification.create({
-      data: {
-        userId: request.senderId,
-        title: 'Friend Request Accepted',
-        message: `@${receiverProfile?.username || 'someone'} accepted your friend request!`,
-        type: 'FRIEND_REQUEST',
-      },
-    });
+    await this.notificationsService.sendNotification(
+      request.senderId,
+      'Friend Request Accepted',
+      `@${receiverProfile?.username || 'someone'} accepted your friend request!`,
+      'FRIEND_REQUEST',
+    );
 
     return friendship;
   }
@@ -461,6 +460,22 @@ export class FriendsController {
       throw new NotFoundException('Friend request not found');
     }
 
+    await this.prisma.friendRequest.delete({ where: { id } });
+    return { success: true };
+  }
+
+  // ==========================================
+  // CANCEL FRIEND REQUEST
+  // ==========================================
+  @Delete('friends/request/:id')
+  async cancelRequest(@Request() req: any, @Param('id') id: string) {
+    const userId = req.user.id;
+    const request = await this.prisma.friendRequest.findUnique({
+      where: { id },
+    });
+    if (!request || request.senderId !== userId) {
+      throw new NotFoundException('Friend request not found');
+    }
     await this.prisma.friendRequest.delete({ where: { id } });
     return { success: true };
   }
