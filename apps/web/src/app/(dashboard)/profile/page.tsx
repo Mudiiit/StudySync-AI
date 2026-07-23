@@ -173,8 +173,11 @@ export default function ProfilePage() {
 
   // Sync tab change from query param
   useEffect(() => {
-    if (initialTab) {
+    const validTabs: TabType[] = ['overview', 'analytics', 'social', 'customize', 'identity', 'privacy'];
+    if (initialTab && validTabs.includes(initialTab)) {
       setActiveTab(initialTab);
+    } else {
+      setActiveTab('overview');
     }
   }, [initialTab]);
 

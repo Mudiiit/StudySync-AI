@@ -12,10 +12,10 @@ export default function SettingsRedirectPage() {
   }, [router]);
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-zinc-950 text-zinc-400">
+    <div className="min-h-[400px] w-full flex items-center justify-center bg-zinc-950 text-zinc-500">
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
-        <span className="text-xs font-semibold uppercase tracking-wider">Redirecting to Settings...</span>
+        <span className="text-xs font-bold uppercase tracking-wider">Redirecting to profile settings...</span>
       </div>
     </div>
   );
