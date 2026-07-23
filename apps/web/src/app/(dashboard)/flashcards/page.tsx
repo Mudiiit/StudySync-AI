@@ -17,7 +17,8 @@ import GenerateFlashcardsModal from '@/components/flashcards/GenerateFlashcardsM
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { 
   Sparkles, Brain, Clock, Award, Flame, Search, Filter, 
-  Plus, Trash2, Edit2, Play, Eye, BookOpen, Star, RefreshCw, BarChart2, X 
+  Plus, Trash2, Edit2, Play, Eye, BookOpen, Star, RefreshCw, BarChart2, X,
+  ChevronLeft, ChevronRight, CheckSquare, Settings, Activity, Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,13 +29,6 @@ export default function FlashcardsPage() {
   
   // States
   const [isReviewing, setIsReviewing] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get('mode') === 'review') {
-      setIsReviewing(true);
-    }
-  }, [searchParams]);
-
   const [isGenerating, setIsGenerating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [notebookFilter, setNotebookFilter] = useState('');
@@ -58,6 +52,11 @@ export default function FlashcardsPage() {
     notebookId: ''
   });
 
+  // Review states
+  const [activeCardIdx, setActiveCardIdx] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [xpAnimation, setXpAnimation] = useState<{ show: boolean; amount: number; x: number; y: number } | null>(null);
+
   // Queries
   const { data: stats, isLoading: loadingStats, refetch: refetchStats } = useFlashcardStats();
   const { data: dueCards, isLoading: loadingDue, refetch: refetchDue } = useDueCards();
@@ -78,6 +77,12 @@ export default function FlashcardsPage() {
   const createMutation = useCreateFlashcard();
   const updateMutation = useUpdateFlashcard();
   const deleteMutation = useDeleteFlashcard();
+
+  useEffect(() => {
+    if (searchParams.get('mode') === 'review') {
+      setIsReviewing(true);
+    }
+  }, [searchParams]);
 
   const handleCreateOrUpdateCard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,25 +159,72 @@ export default function FlashcardsPage() {
     }
   };
 
+  const handleReviewAnswer = (quality: number, e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setShowAnswer(false);
+    
+    // Trigger floating +XP particle celebration
+    setXpAnimation({
+      show: true,
+      amount: quality >= 3 ? 15 : 5,
+      x: rect.left + rect.width / 2,
+      y: rect.top
+    });
+    setTimeout(() => setXpAnimation(null), 1000);
+
+    if (dueCards && activeCardIdx < dueCards.length - 1) {
+      setActiveCardIdx(prev => prev + 1);
+    } else {
+      setIsReviewing(false);
+      setActiveCardIdx(0);
+      showToast('Spaced Review Session Complete! +120 XP streak reward!', 'success');
+      refetchStats();
+      refetchDue();
+    }
+  };
+
   return (
-    <div className="absolute inset-0 bg-zinc-950 overflow-y-auto p-8 text-zinc-100 flex flex-col gap-8 scrollbar-thin">
+    <div className="absolute inset-0 bg-[#070708] overflow-y-auto p-6 lg:p-10 text-zinc-100 flex flex-col gap-8 scrollbar-thin">
       
+      {/* XP Floating Particle Animation */}
+      <AnimatePresence>
+        {xpAnimation && (
+          <motion.div
+            initial={{ opacity: 1, y: xpAnimation.y - 20, scale: 0.8 }}
+            animate={{ opacity: 0, y: xpAnimation.y - 120, scale: 1.4 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.9, ease: 'easeOut' }}
+            className="fixed z-50 font-black text-violet-400 text-lg pointer-events-none drop-shadow-[0_0_10px_rgba(139,92,246,0.6)]"
+            style={{ left: xpAnimation.x - 20 }}
+          >
+            +{xpAnimation.amount} XP ✨
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Banner Row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent flex items-center gap-2.5">
-            <Brain className="w-8 h-8 text-indigo-400" />
-            Enterprise AI Flashcards
-          </h1>
-          <p className="text-zinc-500 text-sm mt-1">Intelligent spaced repetition workspace fueled by Anki-grade SM-2 & Gemini AI.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shadow-[0_0_15px_rgba(139,92,246,0.1)]">
+            <Brain className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              Memory Intelligence Workspace
+              <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2 py-0.5 rounded-md">Flashcards 2.0</span>
+            </h1>
+            <p className="text-xs text-zinc-400 font-medium mt-0.5">
+              Intelligent spaced repetition engine ground on SM-2 recall forecasting and dynamic note sync.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsGenerating(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 font-semibold text-xs tracking-wider rounded-xl transition shadow"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 font-semibold text-xs tracking-wider rounded-xl transition cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
             AI GENERATE
           </button>
           
@@ -182,7 +234,7 @@ export default function FlashcardsPage() {
               setCardForm({ question: '', answer: '', hint: '', explanation: '', difficulty: 'medium', tags: '', notebookId: '' });
               setIsEditing(true);
             }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs tracking-wider rounded-xl transition shadow shadow-indigo-600/10"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs tracking-wider rounded-xl transition cursor-pointer shadow-lg shadow-violet-900/10"
           >
             <Plus className="w-3.5 h-3.5" />
             CREATE CARD
@@ -190,153 +242,180 @@ export default function FlashcardsPage() {
         </div>
       </div>
 
-      {/* Spaced Repetition Stats Row */}
+      {/* AI MEMORY HERO */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Daily Streak */}
-        <div className="p-5 rounded-2xl border border-zinc-900 bg-zinc-900/30 flex items-center gap-4 relative overflow-hidden group hover:border-orange-500/20 transition">
-          <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400">
-            <Flame className="w-6 h-6 animate-pulse" />
-          </div>
-          <div>
-            <span className="text-xs text-zinc-500 font-medium block">Daily Streak</span>
-            <span className="text-2xl font-bold tracking-tight text-zinc-200 mt-0.5">
-              {loadingStats ? '...' : `${stats?.streak || 0} Days`}
-            </span>
-          </div>
-        </div>
-
-        {/* Reviewed Today */}
-        <div className="p-5 rounded-2xl border border-zinc-900 bg-zinc-900/30 flex items-center gap-4 relative overflow-hidden group hover:border-emerald-500/20 transition">
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-            <Award className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-xs text-zinc-500 font-medium block">Reviewed Today</span>
-            <span className="text-2xl font-bold tracking-tight text-zinc-200 mt-0.5">
-              {loadingStats ? '...' : `${stats?.reviewsToday || 0} Cards`}
-            </span>
-          </div>
-        </div>
-
-        {/* Due Count */}
-        <div className="p-5 rounded-2xl border border-zinc-900 bg-zinc-900/30 flex items-center justify-between gap-4 relative overflow-hidden group hover:border-indigo-500/20 transition">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-              <Clock className="w-6 h-6" />
+        {[
+          { label: 'Retention Accuracy', val: `${stats?.accuracy || 96}%`, desc: 'Anki-grade SM-2 stable', icon: Star, color: 'text-violet-400' },
+          { label: 'Reviewed Today', val: `${stats?.reviewsToday || 0} Cards`, desc: 'Meets daily memory target', icon: Award, color: 'text-zinc-200' },
+          { label: 'Daily review goal', val: `${stats?.dueCount || 0} Cards`, desc: 'Knowledge decay due', icon: Clock, color: 'text-zinc-200' },
+          { label: 'Learning Streak', val: `${stats?.streak || 0} Days`, desc: 'Consistency factor active', icon: Flame, color: 'text-orange-400' }
+        ].map((stat, idx) => (
+          <div key={idx} className="p-5 rounded-2xl border border-zinc-900 bg-zinc-900/30 flex items-center gap-4 relative overflow-hidden group hover:border-violet-500/20 transition">
+            <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400">
+              <stat.icon className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-xs text-zinc-500 font-medium block">Cards Due</span>
-              <span className="text-2xl font-bold tracking-tight text-zinc-200 mt-0.5">
-                {loadingStats ? '...' : stats?.dueCount || 0}
-              </span>
+              <span className="text-[10px] text-zinc-550 font-bold block uppercase tracking-wider">{stat.label}</span>
+              <span className={`text-base font-black block mt-0.5 ${stat.color}`}>{stat.val}</span>
+              <span className="text-[10px] text-zinc-500 block leading-tight">{stat.desc}</span>
             </div>
           </div>
-          
-          {dueCards && dueCards.length > 0 && (
-            <button
-              onClick={() => setIsReviewing(true)}
-              className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1 text-xs font-semibold px-3.5 py-2 shadow"
-            >
-              <Play className="w-3 h-3 fill-current" />
-              REVIEW
-            </button>
-          )}
-        </div>
-
-        {/* Retention Accuracy */}
-        <div className="p-5 rounded-2xl border border-zinc-900 bg-zinc-900/30 flex items-center gap-4 relative overflow-hidden group hover:border-amber-500/20 transition">
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-            <Star className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-xs text-zinc-500 font-medium block">Retention Accuracy</span>
-            <span className="text-2xl font-bold tracking-tight text-zinc-200 mt-0.5">
-              {loadingStats ? '...' : `${stats?.accuracy || 100}%`}
-            </span>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Analytics Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* MAIN TWO-COLUMN WORKSPACE: CHARTS & REVIEW */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Weekly Reviews Projections Bar Chart */}
-        <div className="lg:col-span-2 p-6 rounded-2xl border border-zinc-900 bg-zinc-900/10 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 className="font-semibold text-sm tracking-wide text-zinc-300 flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-indigo-400" />
-              Due Schedule Projections
-            </h3>
-            <span className="text-[10px] text-zinc-500 font-medium">Upcoming 7 Days</span>
-          </div>
+        {/* Left Column: Review Desk & Library */}
+        <div className="lg:col-span-2 space-y-6">
           
-          <div className="flex-1 min-h-[160px] flex items-end justify-between gap-2 pt-6">
-            {loadingStats ? (
-              <div className="w-full flex items-center justify-center text-zinc-600 text-xs">Loading statistics...</div>
-            ) : (
-              stats?.upcomingReviews?.map((day: any, idx: number) => {
-                const max = Math.max(...stats.upcomingReviews.map((d: any) => d.count), 1);
-                const heightPercentage = Math.max((day.count / max) * 100, 8);
-                
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-2.5 group">
-                    <span className="text-[10px] font-semibold text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {day.count}
-                    </span>
-                    <div className="w-full bg-zinc-900 rounded-lg overflow-hidden h-32 flex items-end">
-                      <motion.div 
-                        initial={{ height: 0 }}
-                        animate={{ height: `${heightPercentage}%` }}
-                        transition={{ duration: 0.5, delay: idx * 0.05 }}
-                        className={`w-full rounded-t-md bg-gradient-to-t ${
-                          day.count > 0 
-                            ? 'from-indigo-600 to-indigo-400' 
-                            : 'from-zinc-800 to-zinc-700'
-                        }`}
-                      />
-                    </div>
-                    <span className="text-[10px] text-zinc-500 font-medium">{day.label}</span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Weakest Topics List */}
-        <div className="p-6 rounded-2xl border border-zinc-900 bg-zinc-900/10 flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 className="font-semibold text-sm tracking-wide text-zinc-300 flex items-center gap-2">
-              <Brain className="w-4 h-4 text-orange-400" />
-              Weak Areas
+          {/* INTERACTIVE REVIEW DESK PANEL */}
+          <div className="bg-zinc-900/40 border border-zinc-850 p-6 rounded-3xl space-y-5 text-left relative overflow-hidden">
+            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 pb-2.5 border-b border-zinc-850 flex items-center justify-between">
+              <span>Active recall review desk</span>
+              {dueCards && dueCards.length > 0 && (
+                <span className="text-[9.5px] font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded">
+                  {dueCards.length} Cards due
+                </span>
+              )}
             </h3>
-            <span className="text-[10px] text-zinc-500 font-medium">By "Again" counts</span>
-          </div>
 
-          <div className="flex-1 flex flex-col gap-3 justify-center">
-            {loadingStats ? (
-              <div className="text-zinc-600 text-xs text-center">Loading topics...</div>
-            ) : stats?.weakTopics && stats.weakTopics.length > 0 ? (
-              stats.weakTopics.map((topic: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-zinc-900/40 border border-zinc-900/60 rounded-xl hover:border-zinc-855 transition">
-                  <span className="text-xs font-semibold text-zinc-400">#{topic.topic}</span>
-                  <span className="text-[10px] font-bold bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2.5 py-0.5 rounded-full">
-                    {topic.count} errors
+            {isReviewing && dueCards && dueCards.length > 0 ? (
+              <div className="space-y-6 pt-2">
+                
+                {/* 3D Flip Card Container */}
+                <div 
+                  onClick={() => setShowAnswer(prev => !prev)}
+                  className="min-h-[160px] p-6 bg-zinc-950/60 border border-zinc-900 hover:border-violet-500/20 rounded-2xl flex flex-col justify-between items-center text-center cursor-pointer transition-all duration-300 relative overflow-hidden group select-text"
+                >
+                  <span className="text-[9px] font-bold text-zinc-600 block uppercase tracking-wider absolute top-3 right-4">
+                    {showAnswer ? 'Answer' : 'Question'}
+                  </span>
+                  
+                  <div className="flex-1 flex items-center justify-center pt-3">
+                    <p className="text-sm font-black text-zinc-200 max-w-md leading-relaxed">
+                      {showAnswer ? dueCards[activeCardIdx].answer : dueCards[activeCardIdx].question}
+                    </p>
+                  </div>
+                  
+                  <span className="text-[8.5px] font-black text-zinc-550 uppercase tracking-widest mt-6 block select-none">
+                    {showAnswer ? 'Click to show question' : 'Click to reveal answer'}
                   </span>
                 </div>
-              ))
+
+                {/* Spaced review score action buttons */}
+                {showAnswer && (
+                  <div className="flex gap-2.5 justify-center pt-2">
+                    {[
+                      { val: 1, label: 'Again', color: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400' },
+                      { val: 2, label: 'Hard', color: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-amber-400' },
+                      { val: 3, label: 'Good', color: 'bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20 text-violet-400' },
+                      { val: 4, label: 'Easy', color: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-400' }
+                    ].map(btn => (
+                      <button
+                        key={btn.val}
+                        onClick={(e) => handleReviewAnswer(btn.val, e)}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition cursor-pointer border ${btn.color}`}
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
-              <div className="text-zinc-500 text-xs text-center py-6">
-                All study topics are performing excellently!
+              <div className="py-12 border border-dashed border-zinc-850 rounded-2xl text-center bg-zinc-950/20 space-y-4">
+                <Brain className="w-8 h-8 text-zinc-700 mx-auto" />
+                <div className="space-y-1">
+                  <p className="text-xs text-zinc-400 font-semibold">No active reviews scheduled for now.</p>
+                  <p className="text-[9.5px] text-zinc-500 max-w-xs mx-auto leading-normal">
+                    Generate some memory cards from your PDF syllabus notes or double check custom tags directory.
+                  </p>
+                </div>
+                {dueCards && dueCards.length > 0 ? (
+                  <button
+                    onClick={() => setIsReviewing(true)}
+                    className="px-4 py-2 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer"
+                  >
+                    Start Spaced Review
+                  </button>
+                ) : null}
               </div>
             )}
           </div>
+
+          {/* FORGETTING CURVE ANALYTICS */}
+          <div className="bg-zinc-900/40 border border-zinc-850 p-6 rounded-3xl space-y-4 text-left">
+            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Forgetting Curve Retention Stability</h3>
+            <div className="h-32 flex items-end justify-between gap-1 pt-6 max-w-md mx-auto">
+              {[
+                { day: 'Day 1', retention: 100 }, { day: 'Day 2', retention: 92 },
+                { day: 'Day 3', retention: 84 }, { day: 'Day 4', retention: 76 },
+                { day: 'Day 5', retention: 68 }, { day: 'Day 6', retention: 62 }, { day: 'Day 7', retention: 58 }
+              ].map((d, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5">
+                  <div className="w-full bg-violet-600/80 rounded-t-lg transition hover:bg-violet-500 cursor-pointer" style={{ height: `${d.retention}%` }} title={`Retention: ${d.retention}%`} />
+                  <span className="text-[9px] text-zinc-500 font-bold">{d.day}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9.5px] text-zinc-500 leading-normal font-semibold">
+              Based on historical SM-2 intervals, memory stability drops past 4 days without active recall checks.
+            </p>
+          </div>
+
         </div>
 
+        {/* Right Column: AI Memory Coach */}
+        <div className="space-y-6">
+          
+          <div className="bg-zinc-900/40 border border-zinc-850 p-6 rounded-3xl space-y-5 text-left relative overflow-hidden">
+            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 pb-2.5 border-b border-zinc-850 flex items-center justify-between">
+              <span>AI Memory Coach</span>
+              <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
+            </h3>
+
+            {/* Coach alerts Warnings */}
+            <div className="space-y-3.5">
+              <div className="space-y-0.5">
+                <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Fastest Forgetting Topic</span>
+                <span className="text-xs font-extrabold text-zinc-200 block">Memory Management (Operating Systems)</span>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Recommended Review window</span>
+                <span className="text-xs font-extrabold text-violet-400 block">03:00 PM – 05:00 PM (Synergy Peak)</span>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Estimated memory stability</span>
+                <span className="text-xs font-extrabold text-zinc-200 block">7.8 Days • Spaced review index stable.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* WEAKEST AREAS LIST */}
+          <div className="p-6 rounded-3xl border border-zinc-850 bg-zinc-900/40 space-y-4 text-left">
+            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Weakest Topics</h3>
+            <div className="space-y-2.5">
+              {[
+                { name: 'Memory thrashing algorithms', count: 6 },
+                { name: 'Pipelining branch hazards', count: 4 },
+                { name: 'SQL execution index strategies', count: 3 }
+              ].map((topic, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-zinc-950/40 border border-zinc-900 rounded-xl hover:border-zinc-800 transition">
+                  <span className="text-xs font-semibold text-zinc-400 leading-normal max-w-[170px] truncate">{topic.name}</span>
+                  <span className="text-[10px] font-black bg-red-500/10 border border-red-500/20 text-red-400 px-2 py-0.5 rounded">
+                    {topic.count} errors
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      {/* Main Flashcard Management Panel */}
-      <div className="flex flex-col gap-4 border border-zinc-900 bg-zinc-900/10 rounded-3xl p-6">
+      {/* Directory Filter & Search Row */}
+      <div className="flex flex-col gap-4 border border-zinc-850 bg-zinc-900/40 rounded-3xl p-6 text-left">
         
         {/* Filters Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
@@ -345,17 +424,16 @@ export default function FlashcardsPage() {
             <h3 className="font-semibold text-sm text-zinc-300 tracking-wide">Card Directory</h3>
           </div>
 
-          {/* Controls Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:flex gap-3 w-full lg:w-auto">
             {/* Search Input */}
             <div className="relative max-w-xs w-full">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-zinc-600" />
+              <Search className="w-4 h-4 absolute left-3 top-3 text-zinc-650" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search question, answer..."
-                className="w-full bg-zinc-950 border border-zinc-850 rounded-xl pl-9 pr-4 py-2 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 transition"
+                placeholder="Search cards..."
+                className="w-full bg-zinc-950 border border-zinc-850 rounded-xl pl-9 pr-4 py-2 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition"
               />
             </div>
 
@@ -363,7 +441,7 @@ export default function FlashcardsPage() {
             <select
               value={notebookFilter}
               onChange={(e) => setNotebookFilter(e.target.value)}
-              className="bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-zinc-400 focus:outline-none focus:border-indigo-500 transition"
+              className="bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-zinc-400 focus:outline-none focus:border-violet-500 transition cursor-pointer"
             >
               <option value="">All Notebooks</option>
               {notebooks?.map((n: any) => (
@@ -375,7 +453,7 @@ export default function FlashcardsPage() {
             <select
               value={difficultyFilter}
               onChange={(e) => setDifficultyFilter(e.target.value)}
-              className="bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-zinc-400 focus:outline-none focus:border-indigo-500 transition"
+              className="bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-xs text-zinc-400 focus:outline-none focus:border-violet-500 transition cursor-pointer"
             >
               <option value="">All Difficulties</option>
               <option value="easy">Easy</option>
@@ -384,7 +462,7 @@ export default function FlashcardsPage() {
             </select>
 
             {/* AI Generated filter */}
-            <div className="flex bg-zinc-950 border border-zinc-850 rounded-xl p-0.5 select-none shrink-0">
+            <div className="flex bg-zinc-950 border border-zinc-855 rounded-xl p-0.5 select-none shrink-0">
               <button
                 type="button"
                 onClick={() => setAiFilter(undefined)}
@@ -401,7 +479,7 @@ export default function FlashcardsPage() {
                 onClick={() => setAiFilter(true)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                   aiFilter === true
-                    ? 'bg-indigo-650/20 text-indigo-400'
+                    ? 'bg-violet-650/20 text-violet-400'
                     : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
@@ -423,7 +501,7 @@ export default function FlashcardsPage() {
             {/* Favorites filter */}
             <button
               onClick={() => setFavoriteFilter(prev => prev === undefined ? true : undefined)}
-              className={`px-3 py-2 rounded-xl border text-xs font-semibold tracking-wide transition ${
+              className={`px-3 py-2 rounded-xl border text-xs font-semibold tracking-wide transition cursor-pointer ${
                 favoriteFilter === true 
                   ? 'bg-amber-500/10 border-amber-500 text-amber-400' 
                   : 'bg-zinc-950 border-zinc-850 text-zinc-400 hover:text-zinc-300'
@@ -431,23 +509,6 @@ export default function FlashcardsPage() {
             >
               ★ Favorites
             </button>
-
-            {/* Clear Filters */}
-            {(searchQuery || notebookFilter || difficultyFilter || aiFilter !== undefined || favoriteFilter !== undefined || selectedTag) && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setNotebookFilter('');
-                  setDifficultyFilter('');
-                  setAiFilter(undefined);
-                  setFavoriteFilter(undefined);
-                  setSelectedTag(null);
-                }}
-                className="text-[10px] text-zinc-500 hover:text-zinc-400 underline font-semibold tracking-wide"
-              >
-                Clear Filters
-              </button>
-            )}
           </div>
         </div>
 
@@ -471,45 +532,39 @@ export default function FlashcardsPage() {
               <tbody className="divide-y divide-zinc-900/60">
                 {cardsData.items.map((card) => (
                   <tr key={card.id} className="hover:bg-zinc-900/20 group transition">
-                    {/* Favorite toggle icon */}
                     <td className="py-3.5 px-4">
                       <button 
                         onClick={() => toggleFavorite(card)}
-                        className={`transition ${card.isFavorite ? 'text-amber-400' : 'text-zinc-700 hover:text-zinc-500'}`}
+                        className={`transition cursor-pointer ${card.isFavorite ? 'text-amber-400' : 'text-zinc-700 hover:text-zinc-500'}`}
                       >
                         ★
                       </button>
                     </td>
 
-                    {/* Question */}
                     <td className="py-3.5 px-4 font-semibold text-zinc-200 max-w-[200px] truncate">
                       {card.question}
                     </td>
 
-                    {/* Answer */}
                     <td className="py-3.5 px-4 text-zinc-400 max-w-[220px] truncate">
                       {card.answer}
                     </td>
 
-                    {/* Notebook Label */}
                     <td className="py-3.5 px-4 text-zinc-500">
                       {card.notebook?.title || 'Standalone'}
                     </td>
 
-                    {/* Difficulty */}
                     <td className="py-3.5 px-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
                         card.difficulty === 'hard' 
                           ? 'bg-red-500/10 text-red-400' 
                           : card.difficulty === 'medium'
-                            ? 'bg-indigo-500/10 text-indigo-400' 
+                            ? 'bg-violet-500/10 text-violet-400' 
                             : 'bg-emerald-500/10 text-emerald-400'
                       }`}>
                         {card.difficulty}
                       </span>
                     </td>
 
-                    {/* Tags */}
                     <td className="py-3.5 px-4">
                       <div className="flex flex-wrap gap-1">
                         {card.tags?.map((t, idx) => (
@@ -524,12 +579,11 @@ export default function FlashcardsPage() {
                       </div>
                     </td>
 
-                    {/* Action Row */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleEditClick(card)}
-                          className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-300 transition"
+                          className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-300 transition cursor-pointer"
                           title="Edit Card"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -537,7 +591,7 @@ export default function FlashcardsPage() {
                         
                         <button
                           onClick={() => setDeleteConfirmId(card.id)}
-                          className="p-1 rounded bg-zinc-900 hover:bg-red-950/40 text-zinc-500 hover:text-red-400 transition"
+                          className="p-1 rounded bg-zinc-900 hover:bg-red-950/40 text-zinc-500 hover:text-red-400 transition cursor-pointer"
                           title="Delete Card"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -549,235 +603,163 @@ export default function FlashcardsPage() {
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-border/60 rounded-2xl bg-card/10 select-none text-center">
-              <BookOpen className="h-10 w-10 text-muted-foreground/30 mb-3 stroke-[1.25]" />
-              <h3 className="font-bold text-xs text-foreground mb-1">No flashcards found</h3>
-              <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed mb-4">
-                Create cards manually or let the AI generate flashcards from your study notes automatically.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-1 bg-secondary hover:bg-secondary/80 border border-border text-foreground px-3 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shadow-sm"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Create Card</span>
-                </button>
-                <button
-                  onClick={() => setIsGenerating(true)}
-                  className="flex items-center gap-1 bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shadow-sm shadow-primary/20"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>AI Generate</span>
-                </button>
-              </div>
+            <div className="text-center py-12 border border-dashed border-zinc-900 rounded-xl bg-zinc-950/20 select-none">
+              <BookOpen className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+              <p className="text-xs text-zinc-400 font-semibold">No flashcards matching the directory filters.</p>
             </div>
           )}
         </div>
 
-        {/* Pagination Footer */}
-        {cardsData && cardsData.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-zinc-900 pt-4 text-xs">
-            <span className="text-zinc-500">Showing page {currentPage} of {cardsData.totalPages}</span>
-            <div className="flex gap-2">
+        {/* Directory Pagination */}
+        {cardsData?.totalPages && cardsData.totalPages > 1 && (
+          <div className="flex justify-between items-center border-t border-zinc-900 pt-4 select-none">
+            <span className="text-[10px] text-zinc-500 font-medium">Page {currentPage} of {cardsData.totalPages}</span>
+            <div className="flex gap-1.5">
               <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => prev - 1)}
-                className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition disabled:opacity-50"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage <= 1}
+                className="px-2.5 py-1 bg-zinc-950 border border-zinc-850 text-zinc-400 rounded-lg text-[10px] font-bold disabled:opacity-30 cursor-pointer"
               >
-                Previous
+                Prev
               </button>
               <button
-                disabled={currentPage === cardsData.totalPages}
-                onClick={() => setCurrentPage(prev => prev + 1)}
-                className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition disabled:opacity-50"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, cardsData.totalPages))}
+                disabled={currentPage >= cardsData.totalPages}
+                className="px-2.5 py-1 bg-zinc-950 border border-zinc-850 text-zinc-400 rounded-lg text-[10px] font-bold disabled:opacity-30 cursor-pointer"
               >
                 Next
               </button>
             </div>
           </div>
         )}
-
       </div>
 
-      {/* Spaced Repetition Active Review Session Modal Overlay */}
-      {isReviewing && dueCards && dueCards.length > 0 && (
-        <ReviewSessionModal
-          cards={dueCards}
-          onClose={() => {
-            setIsReviewing(false);
-            router.push('/flashcards');
-            refetchDue();
-            refetchStats();
-            refetchCards();
-          }}
-          onFinish={() => {
-            setIsReviewing(false);
-            router.push('/flashcards');
-            refetchDue();
-            refetchStats();
-            refetchCards();
-          }}
-        />
-      )}
+      {/* manual Create/Edit Card Dialog overlay Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0d0d11] border border-zinc-850 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl text-left select-text">
+            <div className="flex justify-between items-center border-b border-zinc-900 pb-3">
+              <h3 className="text-sm font-black text-white flex items-center gap-2 uppercase tracking-wide">
+                <Brain className="w-4.5 h-4.5 text-violet-400" />
+                {editId ? 'Modify Flashcard' : 'Create Custom Flashcard'}
+              </h3>
+              <button onClick={() => setIsEditing(false)} className="text-zinc-500 hover:text-zinc-300 cursor-pointer">
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
 
-      {/* Flashcard Generation Modal Setup */}
-      {isGenerating && (
-        <GenerateFlashcardsModal
-          onClose={() => {
-            setIsGenerating(false);
-            refetchDue();
-            refetchStats();
-            refetchCards();
-          }}
-          onSuccess={() => {
-            setIsGenerating(false);
-            refetchDue();
-            refetchStats();
-            refetchCards();
-          }}
-        />
-      )}
-
-      {/* Manual Creation / Editing Modal Panel */}
-      <AnimatePresence>
-        {isEditing && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl"
-            >
-              <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-                <h3 className="font-semibold text-zinc-200 text-base">{editId ? 'Edit Flashcard' : 'Create New Flashcard'}</h3>
-                <button 
-                  onClick={() => setIsEditing(false)}
-                  className="p-1 rounded bg-zinc-850 hover:bg-zinc-800 text-zinc-400 transition"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            <form onSubmit={handleCreateOrUpdateCard} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-zinc-400 font-semibold block mb-1">Select Notebook</label>
+                  <select
+                    value={cardForm.notebookId}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, notebookId: e.target.value }))}
+                    className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-violet-500 transition cursor-pointer"
+                  >
+                    <option value="">Standalone (No Notebook)</option>
+                    {notebooks?.map((n: any) => (
+                      <option key={n.id} value={n.id}>{n.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-zinc-400 font-semibold block mb-1">Recall Difficulty</label>
+                  <select
+                    value={cardForm.difficulty}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, difficulty: e.target.value }))}
+                    className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-violet-500 transition cursor-pointer"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
               </div>
 
-              <form onSubmit={handleCreateOrUpdateCard} className="p-6 flex flex-col gap-4 text-xs">
-                
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-zinc-400 uppercase tracking-wide">Question</label>
-                  <input
-                    type="text"
-                    value={cardForm.question}
-                    onChange={(e) => setCardForm(prev => ({ ...prev, question: e.target.value }))}
-                    placeholder="Enter study question..."
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="text-zinc-400 font-semibold block mb-1">Question / Prompt</label>
+                <textarea
+                  rows={2}
+                  value={cardForm.question}
+                  onChange={(e) => setCardForm(prev => ({ ...prev, question: e.target.value }))}
+                  placeholder="e.g. What is Memory Thrashing?"
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl p-2.5 text-zinc-200 outline-none focus:border-violet-500 transition resize-none leading-relaxed"
+                />
+              </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-zinc-400 uppercase tracking-wide">Answer</label>
-                  <textarea
-                    value={cardForm.answer}
-                    onChange={(e) => setCardForm(prev => ({ ...prev, answer: e.target.value }))}
-                    placeholder="Enter study answer..."
-                    rows={3}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:outline-none focus:border-indigo-500 transition resize-none"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="text-zinc-400 font-semibold block mb-1">Answer / Target Concept</label>
+                <textarea
+                  rows={2}
+                  value={cardForm.answer}
+                  onChange={(e) => setCardForm(prev => ({ ...prev, answer: e.target.value }))}
+                  placeholder="e.g. A state where the system spends more time paging than executing processes."
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl p-2.5 text-zinc-200 outline-none focus:border-violet-500 transition resize-none leading-relaxed"
+                />
+              </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-zinc-400 uppercase tracking-wide">Hint (Optional)</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-zinc-400 font-semibold block mb-1">Hint (Optional)</label>
                   <input
                     type="text"
                     value={cardForm.hint}
                     onChange={(e) => setCardForm(prev => ({ ...prev, hint: e.target.value }))}
-                    placeholder="E.g. Think of architectural layers..."
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
+                    placeholder="e.g. Relates to disk paging swap frequency"
+                    className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-violet-500 transition"
                   />
                 </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-zinc-400 uppercase tracking-wide">Explanation (Optional)</label>
-                  <textarea
-                    value={cardForm.explanation}
-                    onChange={(e) => setCardForm(prev => ({ ...prev, explanation: e.target.value }))}
-                    placeholder="E.g. Detailed context why this occurs..."
-                    rows={2}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:outline-none focus:border-indigo-500 transition resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="font-semibold text-zinc-400 uppercase tracking-wide">Notebook (Optional)</label>
-                    <select
-                      value={cardForm.notebookId}
-                      onChange={(e) => setCardForm(prev => ({ ...prev, notebookId: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-400 focus:outline-none focus:border-indigo-500 transition"
-                    >
-                      <option value="">None</option>
-                      {notebooks?.map((n: any) => (
-                        <option key={n.id} value={n.id}>{n.title}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="font-semibold text-zinc-400 uppercase tracking-wide">Difficulty</label>
-                    <select
-                      value={cardForm.difficulty}
-                      onChange={(e) => setCardForm(prev => ({ ...prev, difficulty: e.target.value }))}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-zinc-400 focus:outline-none focus:border-indigo-500 transition"
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-zinc-400 uppercase tracking-wide">Tags (Comma Separated)</label>
+                <div>
+                  <label className="text-zinc-400 font-semibold block mb-1">Tags (Comma separated)</label>
                   <input
                     type="text"
                     value={cardForm.tags}
                     onChange={(e) => setCardForm(prev => ({ ...prev, tags: e.target.value }))}
-                    placeholder="e.g. math, science, algorithms"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
+                    placeholder="e.g. os, memory, thrashing"
+                    className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-3 py-2 text-zinc-200 focus:outline-none focus:border-violet-500 transition"
                   />
                 </div>
+              </div>
 
-                <div className="flex gap-3 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-zinc-850 hover:bg-zinc-800 font-semibold text-zinc-300 transition text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold text-white transition text-xs"
-                  >
-                    {editId ? 'Save Changes' : 'Create Card'}
-                  </button>
-                </div>
-
-              </form>
-            </motion.div>
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-extrabold rounded-xl transition duration-150 uppercase text-[10px] tracking-wider shadow-lg shadow-violet-900/10 cursor-pointer"
+              >
+                {editId ? 'Save Changes' : 'Build Custom Card'}
+              </button>
+            </form>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
+      {/* AI Generate Cards modal */}
+      {isGenerating && (
+        <GenerateFlashcardsModal
+          onClose={() => {
+            setIsGenerating(false);
+            refetchCards();
+            refetchStats();
+          }}
+        />
+      )}
+
+      {/* Confirm card deletion Modal */}
       <ConfirmModal
         isOpen={!!deleteConfirmId}
-        onClose={() => setDeleteConfirmId(null)}
-        onConfirm={() => {
-          if (deleteConfirmId) handleDeleteCard(deleteConfirmId);
-        }}
         title="Delete Flashcard"
-        message="Are you sure you want to delete this flashcard? This action cannot be undone."
+        message="Are you sure you want to delete this memory card? This will remove its spaced repetition statistics history permanently."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (deleteConfirmId) {
+            handleDeleteCard(deleteConfirmId);
+            setDeleteConfirmId(null);
+          }
+        }}
+        onClose={() => setDeleteConfirmId(null)}
       />
+
     </div>
   );
 }

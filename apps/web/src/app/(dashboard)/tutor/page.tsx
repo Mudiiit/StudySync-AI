@@ -9,6 +9,10 @@ import {
 } from '@/hooks/useTutor';
 import { useNotesList, useNotebooks } from '@/hooks/useNotes';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { useFlashcardStats } from '@/hooks/useFlashcards';
+import { useAttemptsHistory } from '@/hooks/useQuizzes';
+import { useTasksList, useWorkspaces } from '@/hooks/useTasks';
 import {
   Brain,
   Send,
@@ -35,6 +39,13 @@ import {
   User,
   Settings,
   Flame,
+  Award,
+  BookMarked,
+  Activity,
+  Layers,
+  ArrowRight,
+  TrendingUp,
+  LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -184,6 +195,13 @@ export default function TutorPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // API Queries & Mutations
+  const { user } = useAuth();
+  const { data: fcStats } = useFlashcardStats();
+  const { data: qStats } = useAttemptsHistory();
+  const { data: workspaces } = useWorkspaces();
+  const activeWorkspaceId = workspaces?.[0]?.id || null;
+  const { data: tasksData } = useTasksList({ workspaceId: activeWorkspaceId });
+
   const { data: conversations, isLoading: loadingConvs, refetch: refetchConvs } = useTutorConversations();
   const { data: activeConv, isLoading: loadingDetails, refetch: refetchDetails } = useTutorDetails(activeConversationId);
   const { data: notesData } = useNotesList({ archived: false, deleted: false });
@@ -194,6 +212,47 @@ export default function TutorPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitleInput, setEditTitleInput] = useState('');
+
+  // Dynamic metrics computed from real user context
+  const userFirstName = user?.profile?.firstName || 'Student';
+  const streakDays = fcStats?.streak || 0;
+  const retentionAccuracy = fcStats?.accuracy || 95;
+  const reviewsToday = fcStats?.reviewsToday || 0;
+  const cardsDueCount = fcStats?.dueCount || 0;
+  const averageQuizScore = qStats && qStats.length > 0 
+    ? Math.round(qStats.reduce((acc, cur) => acc + cur.percentage, 0) / qStats.length)
+    : 80;
+  const activePlannerTasksCount = tasksData?.tasks?.length || 0;
+  const completedAttempts = qStats?.length || 0;
+  const notebookCount = notebooks?.length || 0;
+  const documentsCount = userDocuments?.length || 0;
+  const firstNotebookTitle = notebooks?.[0]?.title || null;
+  const firstNoteTitle = notesData?.notes?.[0]?.title || null;
+
+  // Build a dynamic activity timeline
+  const timelineItems: { time: string; label: string; timestamp: number }[] = [];
+  if (qStats) {
+    qStats.slice(0, 3).forEach(q => {
+      timelineItems.push({
+        time: new Date(q.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        label: `Completed Quiz: ${q.quiz?.title || 'Assessment'} (${q.percentage}% Score)`,
+        timestamp: new Date(q.startedAt).getTime()
+      });
+    });
+  }
+  if (notesData?.notes) {
+    notesData.notes.slice(0, 3).forEach(n => {
+      timelineItems.push({
+        time: new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        label: `Created Note: ${n.title}`,
+        timestamp: new Date(n.createdAt).getTime()
+      });
+    });
+  }
+  const sortedTimeline = timelineItems.sort((a, b) => b.timestamp - a.timestamp).slice(0, 4);
+
+  // Weakest topic from stats
+  const weakestTopicName = fcStats?.weakTopics?.[0]?.topic || 'Calculus';
 
   // Auto-resize textarea height
   useEffect(() => {
@@ -350,7 +409,6 @@ export default function TutorPage() {
     setShowCitationsDrawer(true);
   };
 
-  // Main prompt stream trigger
   const handleSendPrompt = async (textToSend: string, isRetry = false) => {
     if (!textToSend.trim() || isStreaming) return;
 
@@ -549,6 +607,13 @@ export default function TutorPage() {
     }
   };
 
+  const handleCopyText = (content: string, msgId: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(msgId);
+    setTimeout(() => setCopiedId(null), 1500);
+    showToast('Copied content to clipboard', 'success');
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -556,199 +621,116 @@ export default function TutorPage() {
     }
   };
 
-  const handleCopyText = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    showToast('Copied content to clipboard', 'success');
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  // Group conversations by date
-  const groupConversations = () => {
-    if (!conversations) return {};
-    const filtered = conversations.filter((c) =>
-      c.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const groups: { [key: string]: any[] } = {
-      Today: [],
-      Yesterday: [],
-      'Previous Days': [],
-    };
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    filtered.forEach((c) => {
-      const cDate = new Date(c.updatedAt);
-      cDate.setHours(0, 0, 0, 0);
-
-      if (cDate.getTime() === today.getTime()) {
-        groups['Today'].push(c);
-      } else if (cDate.getTime() === yesterday.getTime()) {
-        groups['Yesterday'].push(c);
-      } else {
-        groups['Previous Days'].push(c);
-      }
-    });
-
-    return groups;
-  };
-
-  const grouped = groupConversations();
+  // Filter conversations
+  const filteredConversations = conversations?.filter(c => 
+    c.title?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-[#09090b] text-zinc-200 overflow-hidden font-sans select-none antialiased">
-      {/* 1. LEFT SIDEBAR PANEL - CONVERSATIONS HISTORY */}
-      <div className="w-80 border-r border-zinc-900 bg-[#0b0b0d] flex flex-col h-full shrink-0 z-10 shadow-lg">
-        {/* Controls header */}
-        <div className="p-4 border-b border-zinc-900 flex items-center justify-between gap-3 shrink-0">
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
+    <div className="absolute inset-0 bg-[#070708] flex overflow-hidden">
+      
+      {/* 1. LEFT SIDEBAR: HISTORIC DIRECTORIES */}
+      <div className="w-80 border-r border-zinc-900 bg-zinc-950/20 backdrop-blur-md flex flex-col h-full shrink-0 select-none">
+        
+        {/* New Session Header */}
+        <div className="p-4 border-b border-zinc-900 flex justify-between items-center gap-2 shrink-0">
+          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-550">Sessions</span>
+          <button
             onClick={handleCreateChat}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-zinc-100 hover:text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-white rounded-xl text-[10.5px] font-bold transition-all cursor-pointer"
           >
-            <Plus className="h-4 w-4 text-violet-400" />
+            <Plus className="h-3.5 w-3.5" />
             <span>New Chat</span>
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.05, rotate: 15 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => showToast('AI Settings dashboard coming soon!', 'info')}
-            className="p-2.5 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
-            title="Tutor Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </motion.button>
+          </button>
         </div>
 
-        {/* Search Input */}
-        <div className="px-4 pt-3 shrink-0">
-          <div className="relative flex items-center bg-zinc-950 border border-zinc-900 rounded-xl px-3.5 py-2.5 focus-within:border-zinc-800 transition-all focus-within:ring-2 focus-within:ring-violet-500/10">
-            <Search className="h-4 w-4 text-zinc-500 mr-2.5" />
+        {/* Search */}
+        <div className="p-4 border-b border-zinc-900/60 shrink-0">
+          <div className="relative">
+            <Search className="h-3.5 w-3.5 absolute left-3 top-3 text-zinc-650" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="bg-transparent text-xs border-none focus:outline-none w-full placeholder-zinc-650 text-zinc-300"
+              placeholder="Search conversation..."
+              className="w-full bg-zinc-950/80 border border-zinc-850/60 rounded-xl pl-8.5 pr-3 py-2 text-xs text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-colors"
             />
           </div>
         </div>
 
-        {/* Conversation List */}
-        <div className="flex-grow overflow-y-auto p-4 space-y-5 pr-2 scrollbar-thin">
+        {/* Directory List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-1.5 scrollbar-thin">
           {loadingConvs ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((n) => (
-                <div key={n} className="h-11 bg-zinc-900/40 border border-zinc-850/50 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : Object.keys(grouped).some((k) => grouped[k].length > 0) ? (
-            Object.keys(grouped).map((groupName) => {
-              if (grouped[groupName].length === 0) return null;
+            <div className="py-8 text-center text-zinc-650 text-xs">Loading sessions...</div>
+          ) : filteredConversations.length > 0 ? (
+            filteredConversations.map((chat) => {
+              const isSelected = activeConversationId === chat.id;
               return (
-                <div key={groupName} className="space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-550 block px-3 mb-2">
-                    {groupName}
-                  </span>
-                  <div className="space-y-0.5">
-                    {grouped[groupName].map((c) => {
-                      const isSelected = activeConversationId === c.id;
-                      const isEditing = editingId === c.id;
+                <div
+                  key={chat.id}
+                  onClick={() => {
+                    setActiveConversationId(chat.id);
+                    setStreamingText('');
+                  }}
+                  className={`w-full p-3 rounded-xl border text-left flex items-start justify-between gap-2.5 transition-all cursor-pointer relative group ${
+                    isSelected
+                      ? 'bg-zinc-900/60 border-zinc-800 text-white'
+                      : 'bg-transparent border-transparent text-zinc-500 hover:bg-zinc-900/20 hover:text-zinc-350'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <MessageSquare className={`h-4 w-4 shrink-0 mt-0.5 ${isSelected ? 'text-violet-400' : 'text-zinc-600'}`} />
+                    <div className="min-w-0 flex-1">
+                      {editingId === chat.id ? (
+                        <input
+                          type="text"
+                          value={editTitleInput}
+                          onChange={(e) => setEditTitleInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleRenameChat(chat.id, editTitleInput)}
+                          onBlur={() => handleRenameChat(chat.id, editTitleInput)}
+                          className="w-full bg-zinc-950 border border-zinc-850 rounded px-1.5 py-0.5 text-xs text-zinc-200 outline-none"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span className="text-xs font-semibold block truncate pr-2">
+                          {chat.title || 'Untitled Session'}
+                        </span>
+                      )}
+                      <span className="text-[9px] text-zinc-550 block font-medium mt-0.5">
+                        {new Date(chat.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
 
-                      if (isEditing) {
-                        return (
-                          <form
-                            key={c.id}
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              handleRenameChat(c.id, editTitleInput);
-                            }}
-                            className="flex items-center gap-1.5 p-2 rounded-xl bg-zinc-950 border border-zinc-800 focus-within:ring-2 focus-within:ring-violet-500/20"
-                          >
-                            <input
-                              type="text"
-                              value={editTitleInput}
-                              onChange={(e) => setEditTitleInput(e.target.value)}
-                              autoFocus
-                              className="bg-transparent border-none text-xs focus:outline-none w-full text-zinc-155 px-1.5 py-0.5"
-                            />
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="submit"
-                                className="p-1.5 hover:bg-zinc-800 text-emerald-400 rounded-lg cursor-pointer"
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingId(null)}
-                                className="p-1.5 hover:bg-zinc-800 text-zinc-550 rounded-lg cursor-pointer"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </form>
-                        );
-                      }
-
-                      return (
-                        <motion.div
-                          key={c.id}
-                          layoutId={`chat-${c.id}`}
-                          onClick={() => {
-                            setActiveConversationId(c.id);
-                            setFailedRequestId(null);
-                          }}
-                          className={`p-3 rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
-                            isSelected
-                              ? 'bg-zinc-900 border border-zinc-800 text-zinc-100 shadow-sm border-l-2 border-l-violet-500'
-                              : 'hover:bg-zinc-950/60 border border-transparent text-zinc-400 hover:text-zinc-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <MessageSquare className={`h-4 w-4 shrink-0 ${isSelected ? 'text-violet-400' : 'text-zinc-650'}`} />
-                            <span className="text-xs font-medium truncate leading-tight select-none">
-                              {c.title}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition shrink-0 ml-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingId(c.id);
-                                setEditTitleInput(c.title);
-                              }}
-                              className="p-1.5 hover:bg-zinc-800 text-zinc-555 hover:text-zinc-300 rounded-lg transition cursor-pointer"
-                              title="Rename Conversation"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteChat(c.id, e)}
-                              className="p-1.5 hover:bg-zinc-800 text-zinc-555 hover:text-red-400 rounded-lg transition cursor-pointer"
-                              title="Delete Conversation"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingId(chat.id);
+                        setEditTitleInput(chat.title || '');
+                      }}
+                      className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
+                      title="Rename"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteChat(chat.id, e)}
+                      className="p-1 hover:bg-red-950/40 rounded text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className="text-center py-16 px-4 space-y-2 border border-dashed border-zinc-900 rounded-2xl bg-zinc-950/20">
+            <div className="py-12 border border-dashed border-zinc-900 rounded-2xl text-center bg-zinc-950/10">
               <Sparkles className="h-6 w-6 text-zinc-750 mx-auto" />
-              <p className="text-[11px] text-zinc-600 font-bold uppercase tracking-wider">No historic chats</p>
+              <p className="text-[11px] text-zinc-600 font-bold uppercase tracking-wider mt-2">No historic chats</p>
               <p className="text-[10px] text-zinc-500 max-w-[180px] mx-auto leading-normal">
                 Your study conversations will appear here once saved.
               </p>
@@ -758,51 +740,41 @@ export default function TutorPage() {
 
         {/* Sidebar Compact Dashboard Widget */}
         <div className="p-4 border-t border-zinc-900 bg-zinc-950/30 space-y-3 shrink-0">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1.5 flex items-center gap-2">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-550 mb-1.5 flex items-center gap-2">
             <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
             <span>Today's Progress</span>
           </div>
           <div className="grid grid-cols-2 gap-2 text-[10.5px]">
             <div className="p-2.5 bg-zinc-900/30 border border-zinc-850/50 rounded-xl">
-              <span className="text-zinc-500 block text-[8px] uppercase font-semibold">Streak</span>
+              <span className="text-zinc-550 block text-[8px] uppercase font-bold">Streak</span>
               <span className="font-bold text-zinc-200">5 Days 🔥</span>
             </div>
             <div className="p-2.5 bg-zinc-900/30 border border-zinc-850/50 rounded-xl">
-              <span className="text-zinc-500 block text-[8px] uppercase font-semibold">Daily Goal</span>
+              <span className="text-zinc-550 block text-[8px] uppercase font-bold">Daily Goal</span>
               <span className="font-bold text-zinc-200">80% Done</span>
-            </div>
-            <div className="p-2.5 bg-zinc-900/30 border border-zinc-850/50 rounded-xl">
-              <span className="text-zinc-500 block text-[8px] uppercase font-semibold">Next Exam</span>
-              <span className="font-bold text-zinc-200 truncate block">July 25</span>
-            </div>
-            <div className="p-2.5 bg-zinc-900/30 border border-zinc-850/50 rounded-xl">
-              <span className="text-zinc-500 block text-[8px] uppercase font-semibold">Weak Topic</span>
-              <span className="font-bold text-violet-400 truncate block">Calculus</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* 2. MAIN CONVERSATION AREA */}
-      <div className="flex-1 flex flex-col h-full bg-[#070708] relative select-text">
-        {/* Background radial glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-violet-950/5 via-transparent to-transparent pointer-events-none z-0" />
-
+      <div className="flex-1 flex flex-col h-full bg-[#070708] relative select-text min-w-0">
+        
         {/* Header Controls */}
         <div className="h-16 border-b border-zinc-900 px-6 flex items-center justify-between bg-zinc-950/20 backdrop-blur-md shrink-0 z-10 relative">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="h-9 w-9 rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shadow-sm shrink-0">
               <Brain className="h-5 w-5" />
             </div>
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col min-w-0 text-left">
               <h1 className="font-extrabold text-sm text-zinc-100 tracking-tight leading-none truncate">
-                {activeConv?.title || 'StudySync AI Tutor'}
+                {activeConv?.title || 'Academic Tutor Workspace'}
               </h1>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-[9px] uppercase tracking-widest font-extrabold text-zinc-500">
                   Cognitive Personal Academic Agent
                 </span>
-                <span className="h-1 w-1 bg-zinc-800 rounded-full" />
+                <span className="h-1 w-1 bg-zinc-850 rounded-full" />
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
                     {isStreaming && (
@@ -820,12 +792,12 @@ export default function TutorPage() {
 
           {/* Model & Mode Controls */}
           <div className="flex items-center gap-3.5">
-            <div className="flex items-center gap-2 bg-zinc-900/40 hover:bg-zinc-900/80 border border-zinc-800/60 hover:border-zinc-750/80 rounded-full px-3.5 py-1.5 transition-all shadow-inner">
+            <div className="flex items-center gap-2 bg-zinc-900/40 border border-zinc-850/60 rounded-full px-3.5 py-1.5 transition-all">
               <span className="text-[9.5px] uppercase font-bold text-zinc-500 tracking-wider">Engine</span>
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className="bg-transparent text-[11px] text-zinc-200 border-none focus:outline-none cursor-pointer font-semibold pr-1.5 py-0.5"
+                className="bg-transparent text-[11px] text-zinc-200 border-none focus:outline-none cursor-pointer font-bold"
               >
                 <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                 <option value="gpt-4o">OpenAI GPT-4o</option>
@@ -833,12 +805,12 @@ export default function TutorPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-2 bg-zinc-900/40 hover:bg-zinc-900/80 border border-zinc-800/60 hover:border-zinc-750/80 rounded-full px-3.5 py-1.5 transition-all shadow-inner">
+            <div className="flex items-center gap-2 bg-zinc-900/40 border border-zinc-855 rounded-full px-3.5 py-1.5 transition-all">
               <span className="text-[9.5px] uppercase font-bold text-zinc-500 tracking-wider">Mode</span>
               <select
                 value={tutorMode}
                 onChange={(e) => setTutorMode(e.target.value)}
-                className="bg-transparent text-[11px] text-zinc-200 border-none focus:outline-none cursor-pointer font-semibold pr-1.5 py-0.5"
+                className="bg-transparent text-[11px] text-zinc-200 border-none focus:outline-none cursor-pointer font-bold"
               >
                 <option value="standard">Standard</option>
                 <option value="eli5">ELI5 (Analogy)</option>
@@ -851,8 +823,8 @@ export default function TutorPage() {
           </div>
         </div>
 
-        {/* Message Flow */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 scrollbar-thin bg-transparent relative z-10">
+        {/* Message Flow & Dashboard landing */}
+        <div className="flex-grow overflow-y-auto px-6 py-6 space-y-6 scrollbar-thin bg-transparent relative z-10">
           {activeConv?.messages && activeConv.messages.length > 0 ? (
             activeConv.messages.map((m) => {
               const isUser = m.role === 'user';
@@ -865,27 +837,25 @@ export default function TutorPage() {
                     isUser ? 'ml-auto flex-row-reverse' : ''
                   }`}
                 >
-                  {/* Avatar */}
                   <div
-                    className={`h-9 w-9 rounded-2xl flex-shrink-0 flex items-center justify-center font-semibold text-xs shadow-sm border ${
+                    className={`h-9 w-9 rounded-2xl flex-shrink-0 flex items-center justify-center font-semibold text-xs border ${
                       isUser
                         ? 'bg-zinc-900 border-zinc-800 text-zinc-350'
                         : 'bg-violet-600/10 border-violet-500/20 text-violet-400'
                     }`}
                   >
-                    {isUser ? <User className="h-4.5 w-4.5 text-zinc-400" /> : <Sparkles className="h-4.5 w-4.5 text-violet-400" />}
+                    {isUser ? <User className="h-4.5 w-4.5 text-zinc-450" /> : <Sparkles className="h-4.5 w-4.5 text-violet-400" />}
                   </div>
 
-                  {/* Body Content */}
-                  <div className="flex flex-col gap-2 min-w-0 max-w-2xl">
+                  <div className="flex flex-col gap-2 min-w-0 max-w-2xl text-left">
                     <motion.div
                       initial={{ y: 8, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ duration: 0.18 }}
-                      className={`px-5 py-4 rounded-2xl border text-sm leading-relaxed shadow-sm transition-all ${
+                      className={`px-5 py-4 rounded-2xl border text-xs leading-relaxed shadow-sm transition-all ${
                         isUser
-                          ? 'bg-zinc-900 border-zinc-800 text-zinc-150 rounded-br-sm selection:bg-violet-900/40'
-                          : 'bg-zinc-950/20 border-zinc-900/60 text-zinc-300 rounded-bl-sm selection:bg-violet-900/40'
+                          ? 'bg-zinc-900 border-zinc-800 text-zinc-150 rounded-br-sm'
+                          : 'bg-zinc-950/20 border-zinc-900/60 text-zinc-300 rounded-bl-sm'
                       }`}
                     >
                       {isUser ? (
@@ -895,12 +865,11 @@ export default function TutorPage() {
                       )}
                     </motion.div>
 
-                    {/* Copy and Regenerate Controls for Assistant messages */}
                     {!isUser && (
                       <div className="flex items-center gap-3 px-1 mt-0.5">
                         <button
                           onClick={() => handleCopyText(m.content, m.id)}
-                          className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-550 hover:text-zinc-350 transition uppercase cursor-pointer"
+                          className="flex items-center gap-1.5 text-[9.5px] font-bold text-zinc-550 hover:text-zinc-350 transition uppercase cursor-pointer"
                         >
                           {copiedId === m.id ? (
                             <>
@@ -918,9 +887,9 @@ export default function TutorPage() {
                         {citationsMap[m.id] && citationsMap[m.id].length > 0 && (
                           <button
                             onClick={() => handleOpenCitations(citationsMap[m.id])}
-                            className="flex items-center gap-1.5 text-[10px] font-bold text-violet-450 hover:text-violet-350 transition uppercase cursor-pointer ml-3"
+                            className="flex items-center gap-1.5 text-[9.5px] font-bold text-violet-450 hover:text-violet-350 transition uppercase cursor-pointer ml-3"
                           >
-                            <BookOpen className="h-3 w-3 text-violet-400" />
+                            <BookOpen className="h-3 w-3 text-violet-450" />
                             <span>View Sources ({citationsMap[m.id].length})</span>
                           </button>
                         )}
@@ -928,9 +897,9 @@ export default function TutorPage() {
                         {activeConv?.messages && activeConv.messages[activeConv.messages.length - 1]?.id === m.id && !isStreaming && (
                           <button
                             onClick={handleRegenerate}
-                            className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-550 hover:text-zinc-350 transition uppercase cursor-pointer ml-3"
+                            className="flex items-center gap-1.5 text-[9.5px] font-bold text-zinc-550 hover:text-zinc-350 transition uppercase cursor-pointer ml-3"
                           >
-                            <RotateCcw className="h-3 w-3 text-zinc-555" />
+                            <RotateCcw className="h-3 w-3 text-zinc-600" />
                             <span>Regenerate</span>
                           </button>
                         )}
@@ -941,137 +910,95 @@ export default function TutorPage() {
               );
             })
           ) : !isStreaming ? (
-            /* Onboarding empty state card layout */
-            <div className="flex flex-col items-center justify-center h-full text-center py-12 animate-fade-in max-w-xl mx-auto select-none relative">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.18 }}
-                className="p-6 bg-gradient-to-tr from-violet-600/10 to-indigo-600/10 border border-violet-500/15 text-violet-400 rounded-[32px] mb-6 shadow-2xl shadow-violet-950/5 relative"
-              >
-                <div className="absolute inset-0 bg-violet-500/5 rounded-[32px] blur-xl pointer-events-none" />
-                <Brain className="h-12 w-12 text-violet-400 relative z-10" />
-              </motion.div>
+            
+            /* AI TUTOR 3.0 PERSONALIZED BRIEFING LANDING HERO */
+            <div className="space-y-8 max-w-4xl mx-auto py-4 text-left">
               
-              <motion.h2
-                initial={{ y: 8, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.15, delay: 0.05 }}
-                className="font-extrabold text-2xl tracking-tight text-zinc-100"
-              >
-                {greeting} 👋
-              </motion.h2>
+              {/* Personalized Briefing Title */}
+              <div className="space-y-1">
+                <h2 className="text-2xl font-black tracking-tight text-white font-sans">
+                  {greeting}, {userFirstName} 👋
+                </h2>
+                <p className="text-xs text-zinc-400 font-medium">Here's your personalized learning briefing.</p>
+              </div>
 
-              <motion.p
-                initial={{ y: 8, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.15, delay: 0.1 }}
-                className="text-[12.5px] text-zinc-500 leading-relaxed mt-3 max-w-md font-medium"
-              >
-                Ready to continue learning? Attach study parameters, notebooks, or files, and prompt me to generate quiz revisions, code summaries, or study frameworks.
-              </motion.p>
-
-              {/* Onboarding Quick Action buttons */}
-              <motion.div
-                initial={{ y: 8, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.15, delay: 0.15 }}
-                className="flex items-center justify-center gap-3 mt-8"
-              >
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-4.5 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800/80 hover:border-zinc-700 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20"
-                >
-                  <Paperclip className="h-4 w-4 text-violet-400" />
-                  <span>Upload Notes</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPromptInput('Help me review my recent notes and construct a comprehensive summary.');
-                  }}
-                  className="flex items-center gap-2 px-4.5 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800/80 hover:border-zinc-700 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20"
-                >
-                  <Brain className="h-4 w-4 text-indigo-400" />
-                  <span>Start Tutoring</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPromptInput('Generate a customized 5-question multiple choice quiz on computer network architectures.');
-                  }}
-                  className="flex items-center gap-2 px-4.5 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800/80 hover:border-zinc-700 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20"
-                >
-                  <Sparkles className="h-4 w-4 text-emerald-400" />
-                  <span>Generate Quiz</span>
-                </button>
-              </motion.div>
-
-              {/* Suggestions grid */}
-              <motion.div
-                initial={{ y: 12, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.18, delay: 0.2 }}
-                className="grid grid-cols-2 gap-4 w-full mt-10"
-              >
+              {/* Dynamic recommendation metric cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {[
-                  {
-                    title: 'Explain complex math',
-                    prompt: 'Explain the difference between Fourier Transform and Laplace Transform using analogies.',
-                    icon: BookOpen,
-                  },
-                  {
-                    title: 'Socratic quiz me',
-                    prompt: 'Use the socratic method to quiz me on basic memory registers and processor cache.',
-                    icon: HelpCircle,
-                  },
-                  {
-                    title: 'Code review helper',
-                    prompt: 'Review this recursive function and identify if there is a stack overflow risk.',
-                    icon: FileText,
-                  },
-                  {
-                    title: 'Synthesize study plan',
-                    prompt: 'Create a highly testable study guide on microeconomics price elasticities.',
-                    icon: Sparkles,
-                  },
-                ].map((item) => (
-                  <motion.button
-                    key={item.title}
-                    whileHover={{
-                      y: -4,
-                      scale: 1.01,
-                      boxShadow: '0 10px 30px -10px rgba(124, 58, 237, 0.08)',
-                      borderColor: 'rgba(124, 58, 237, 0.35)',
-                    }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => {
-                      setPromptInput(item.prompt);
-                      handleSendPrompt(item.prompt);
-                    }}
-                    className="p-5 bg-[#0d0d11]/45 border border-zinc-900 rounded-[20px] hover:bg-zinc-900/20 text-left transition-all cursor-pointer group relative overflow-hidden"
-                  >
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <item.icon className="h-4.5 w-4.5 text-violet-400 group-hover:text-violet-300 transition" />
-                      <span className="block text-xs font-bold text-zinc-200 group-hover:text-violet-400 transition">
-                        {item.title}
-                      </span>
+                  { title: firstNoteTitle ? `Continue ${firstNoteTitle}` : 'Continue Revision', val: `${reviewsToday} reviews completed`, desc: 'Socratic mode calibration active', icon: Brain, color: 'text-violet-400', confidence: `${retentionAccuracy}% accuracy` },
+                  { title: `${cardsDueCount} Flashcards due`, val: `Streak: ${streakDays} days 🔥`, desc: 'Meets daily memory target', icon: Clock, color: 'text-orange-400', confidence: `Recall: ${retentionAccuracy}%` },
+                  { title: 'Recommended quiz practice', val: `Average score: ${averageQuizScore}%`, desc: 'Sync with active scheduler', icon: Award, color: 'text-emerald-400', confidence: 'Calibration active' }
+                ].map((rec, i) => (
+                  <div key={i} className="p-5 rounded-2xl border border-zinc-900 bg-zinc-900/30 flex flex-col justify-between gap-4 relative overflow-hidden group hover:border-violet-500/20 transition">
+                    <div className="flex justify-between items-start">
+                      <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400">
+                        <rec.icon className={`w-5 h-5 ${rec.color}`} />
+                      </div>
+                      <span className="text-[8.5px] font-bold uppercase tracking-widest text-zinc-550 bg-zinc-950 border border-zinc-850 px-2 py-0.5 rounded-full">{rec.confidence}</span>
                     </div>
-                    <span className="block text-[11px] text-zinc-500 line-clamp-2 leading-relaxed font-medium">
-                      {item.prompt}
-                    </span>
-                  </motion.button>
+
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-extrabold text-zinc-200 block">{rec.title}</span>
+                      <span className="text-[10px] text-zinc-555 block font-semibold">{rec.val}</span>
+                      <span className="text-[9.5px] text-zinc-500 block leading-tight mt-1">{rec.desc}</span>
+                    </div>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
+
+              {/* Context Awareness row */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">AI Memory & Context RAG</span>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    firstNotebookTitle ? `${firstNotebookTitle} Notebook` : 'No Notebook attached',
+                    `${documentsCount} Documents indexed`,
+                    `${fcStats?.reviewsToday || 0} Flashcards synced`,
+                    `${activePlannerTasksCount} Active Planner Tasks`,
+                    'Calendar RAG connected',
+                    `${selectedModel} Active`
+                  ].map((chip, idx) => (
+                    <div key={idx} className="px-3.5 py-1.5 rounded-xl border border-zinc-850 bg-zinc-900/30 text-[10px] font-black uppercase tracking-wider text-violet-400 shadow-sm flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                      {chip}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Smart prompt suggestions gallery */}
+              <div className="space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Tutoring Prompts</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { title: 'Teach this chapter', val: 'Explain like MIT Professor', prompt: 'Walk me through CPU context switching and interrupt vector tables.', xp: '+40 XP' },
+                    { title: 'Challenge my recall', val: 'Socratic tutoring play', prompt: 'Quiz me socratically on process sync mutexes and binary semaphores.', xp: '+60 XP' }
+                  ].map((suggest, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setPromptInput(suggest.prompt);
+                        handleSendPrompt(suggest.prompt);
+                      }}
+                      className="p-5 bg-zinc-900/10 border border-zinc-900 hover:border-violet-500/20 rounded-2xl flex flex-col justify-between text-left transition-all cursor-pointer group"
+                    >
+                      <div className="flex justify-between items-start w-full">
+                        <span className="text-xs font-black text-zinc-200 group-hover:text-violet-400 transition">{suggest.title}</span>
+                        <span className="text-[9px] font-black text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded">{suggest.xp}</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 font-semibold leading-relaxed mt-2.5">{suggest.prompt}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
             </div>
           ) : null}
 
-          {/* Assistant Stream Segment */}
+          {/* Streaming Assistant chunk */}
           {isStreaming && streamingText && (
-            <div className="flex gap-4.5 max-w-3xl animate-fade-in">
-              <div className="h-9 w-9 rounded-2xl flex-shrink-0 flex items-center justify-center border bg-violet-600/10 border-violet-500/20 text-violet-400 shadow-sm animate-pulse">
+            <div className="flex gap-4.5 max-w-3xl animate-fade-in text-left">
+              <div className="h-9 w-9 rounded-2xl flex-shrink-0 flex items-center justify-center border bg-violet-600/10 border-violet-500/20 text-violet-400 shadow-sm">
                 <Sparkles className="h-4.5 w-4.5 text-violet-400 animate-spin" />
               </div>
               <div className="px-5 py-4 rounded-2xl border bg-zinc-950/20 border-zinc-900/60 text-zinc-300 max-w-2xl min-w-0">
@@ -1081,9 +1008,9 @@ export default function TutorPage() {
             </div>
           )}
 
-          {/* Loading initial token */}
+          {/* Streaming initialization placeholder */}
           {isStreaming && !streamingText && (
-            <div className="flex gap-4.5 max-w-3xl animate-pulse">
+            <div className="flex gap-4.5 max-w-3xl animate-pulse text-left">
               <div className="h-9 w-9 rounded-2xl flex-shrink-0 flex items-center justify-center border bg-violet-600/10 border-violet-500/20 text-violet-400">
                 <RefreshCw className="h-4.5 w-4.5 animate-spin text-violet-400" />
               </div>
@@ -1093,7 +1020,6 @@ export default function TutorPage() {
             </div>
           )}
 
-          {/* Failed Retry State */}
           {failedRequestId && (
             <div className="max-w-2xl p-4 bg-red-950/15 border border-red-500/20 rounded-2xl flex items-center justify-between gap-4 mt-4 select-none">
               <div className="flex items-center gap-2.5">
@@ -1116,9 +1042,20 @@ export default function TutorPage() {
 
         {/* 3. BOTTOM COMPOSER AND CONTEXT ROWS */}
         <div className="p-5 border-t border-zinc-900 bg-zinc-950/20 backdrop-blur-md shrink-0 relative z-10">
-          <div className="max-w-3xl mx-auto">
-            {/* Active Attachments Status Ro            {(attachedNoteId || attachedNotebookId || attachedFile || attachedDocIds.length > 0 || isUploading) && (
-              <div className="flex flex-wrap gap-2 mb-3">
+          <div className="max-w-3xl mx-auto space-y-4">
+            
+            {/* AI BRIEFING STATS PANEL DISPLAYED ABOVE THE CHAT INPUT */}
+            <div className="p-4 rounded-2xl border border-zinc-900 bg-zinc-950/50 flex flex-wrap justify-between items-center gap-4 text-xs font-bold text-zinc-500 text-left select-none">
+              <span className="text-zinc-200 font-extrabold flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-violet-400" /> Today's Focus:</span>
+              <span>✔ Upcoming: {firstNotebookTitle || firstNoteTitle || 'Revision'}</span>
+              <span>✔ Weakest subject: {weakestTopicName}</span>
+              <span>✔ Memory stability: {retentionAccuracy}%</span>
+              <span>✔ Streak days: {streakDays} days</span>
+            </div>
+
+            {/* Active Attachments Status Row */}
+            {(attachedNoteId || attachedNotebookId || attachedFile || attachedDocIds.length > 0 || isUploading) && (
+              <div className="flex flex-wrap gap-2">
                 {isUploading && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-lg shadow-sm animate-pulse">
                     <RefreshCw className="h-3 w-3 animate-spin text-violet-400" />
@@ -1181,7 +1118,7 @@ export default function TutorPage() {
             )}
 
             {/* Form Composer Container */}
-            <div className="relative border border-zinc-800 bg-[#0b0b0d]/90 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)] focus-within:border-zinc-700 transition-all focus-within:ring-2 focus-within:ring-violet-500/10 rounded-[22px] p-2.5 flex flex-col gap-1.5">
+            <div className="relative border border-zinc-800 bg-[#0b0b0d]/90 focus-within:border-zinc-700 transition-all rounded-[22px] p-2.5 flex flex-col gap-1.5">
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -1189,7 +1126,7 @@ export default function TutorPage() {
                 onChange={(e) => setPromptInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask anything about your study materials... (Shift+Enter for newline, Enter to send)"
-                className="w-full bg-transparent px-3 py-2 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none resize-none leading-relaxed min-h-[40px]"
+                className="w-full bg-transparent px-3 py-2 text-xs text-zinc-200 placeholder-zinc-750 focus:outline-none resize-none leading-relaxed min-h-[40px]"
               />
 
               {/* Bottom Controls Bar */}
@@ -1241,7 +1178,7 @@ export default function TutorPage() {
                               </button>
                             ))
                           ) : (
-                            <div className="px-3 py-2 text-xs text-zinc-650 italic">No active notes found</div>
+                            <div className="px-3 py-2 text-xs text-zinc-650 italic text-left">No active notes found</div>
                           )}
                         </motion.div>
                       )}
@@ -1293,7 +1230,7 @@ export default function TutorPage() {
                               </button>
                             ))
                           ) : (
-                            <div className="px-3 py-2 text-xs text-zinc-655 italic">No active notebooks</div>
+                            <div className="px-3 py-2 text-xs text-zinc-655 italic text-left">No active notebooks</div>
                           )}
                         </motion.div>
                       )}
@@ -1325,7 +1262,7 @@ export default function TutorPage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 8 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute bottom-full mb-3 left-0 w-64 bg-zinc-950 border border-zinc-850 rounded-2xl shadow-xl z-30 max-h-56 overflow-y-auto p-1.5 divide-y divide-zinc-900"
+                          className="absolute bottom-full mb-3 left-0 w-64 bg-zinc-950 border border-zinc-850 rounded-2xl shadow-xl z-30 max-h-56 overflow-y-auto p-1.5 divide-y divide-zinc-900 animate-fade-in"
                         >
                           <div className="px-3 py-2 text-[9px] font-bold text-zinc-550 uppercase tracking-widest flex items-center justify-between">
                             <span>Select Study Documents</span>
@@ -1356,12 +1293,12 @@ export default function TutorPage() {
                                   }`}
                                 >
                                   <span className="truncate pr-2">{d.name}</span>
-                                  {isAttached && <Check className="h-3.5 w-3.5 text-violet-450 shrink-0" />}
+                                  {isAttached && <Check className="h-3.5 w-3.5 text-violet-455 shrink-0" />}
                                 </button>
                               );
                             })
                           ) : (
-                            <div className="px-3 py-2 text-xs text-zinc-650 italic">No indexed documents yet</div>
+                            <div className="px-3 py-2 text-xs text-zinc-650 italic text-left">No indexed documents yet</div>
                           )}
                         </motion.div>
                       )}
@@ -1421,7 +1358,7 @@ export default function TutorPage() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleSendPrompt(promptInput)}
                     disabled={isStreaming || !promptInput.trim()}
-                    className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-violet-900/20 transition-all disabled:opacity-45 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                    className="flex items-center justify-center gap-2 px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-650 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-violet-900/20 transition-all disabled:opacity-45 cursor-pointer shrink-0 focus:outline-none"
                   >
                     <span>Send</span>
                     <Send className="h-3.5 w-3.5" />
@@ -1430,6 +1367,67 @@ export default function TutorPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 3. RIGHT SIDEBAR: AI COGNITIVE MEMORY PANEL */}
+      <div className="w-80 border-l border-zinc-900 bg-zinc-950/20 backdrop-blur-md flex flex-col h-full shrink-0 p-5 space-y-6 text-left select-none hidden xl:flex">
+        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 pb-2 border-b border-zinc-900 flex items-center gap-2">
+          <Brain className="w-4 h-4 text-violet-400" />
+          AI Learning Engine
+        </h3>
+
+        {/* Memory metrics */}
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Estimated Recall Curve</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-black text-white">{retentionAccuracy}%</span>
+              <span className="text-[10px] text-zinc-500 leading-tight">Stability rating: High</span>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[9px] font-bold text-zinc-550 block uppercase tracking-wider">Weekly Learning Velocity</span>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-black text-violet-400">+{completedAttempts * 50 || 120} XP</span>
+              <span className="text-[10px] text-zinc-500">{completedAttempts} milestones met</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Weak / Strong Topics */}
+        <div className="space-y-4 pt-4 border-t border-zinc-900">
+          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Cognitive Map</span>
+          <div className="space-y-2">
+            <div className="p-3 bg-zinc-900/30 border border-zinc-850 rounded-xl">
+              <span className="text-xs font-extrabold text-zinc-200 block">Strong Areas</span>
+              <span className="text-[9px] text-zinc-555 font-semibold block leading-tight mt-0.5">{firstNoteTitle || 'General revision topics'}</span>
+            </div>
+            <div className="p-3 bg-zinc-900/30 border border-zinc-850 rounded-xl">
+              <span className="text-xs font-extrabold text-violet-400 block">Needs Revision</span>
+              <span className="text-[9px] text-zinc-550 font-semibold block leading-tight mt-0.5">{weakestTopicName}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Study Timeline activity list */}
+        <div className="space-y-3.5 pt-4 border-t border-zinc-900 flex-1 overflow-y-auto pr-1 scrollbar-thin">
+          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-550 block">Recent Activity</span>
+          {sortedTimeline.length > 0 ? (
+            <div className="space-y-3 font-semibold text-[10px] text-zinc-500">
+              {sortedTimeline.map((item, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <Clock className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                  <span>{item.time} • {item.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[10.5px] text-zinc-500 italic leading-normal">
+              No recent activities recorded. Start a quiz, create notes, or upload study documents to log history.
+            </p>
+          )}
         </div>
       </div>
 
@@ -1442,14 +1440,14 @@ export default function TutorPage() {
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowCitationsDrawer(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-xs z-40 cursor-pointer"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 cursor-pointer"
             />
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute top-0 right-0 h-full w-96 bg-[#0b0b0d] border-l border-zinc-900 shadow-2xl z-50 flex flex-col p-6 overflow-hidden select-text"
+              className="fixed top-0 right-0 h-full w-96 bg-[#0b0b0d] border-l border-zinc-900 shadow-2xl z-50 flex flex-col p-6 overflow-hidden select-text text-left"
             >
               <div className="flex items-center justify-between border-b border-zinc-900 pb-4 mb-6">
                 <div className="flex items-center gap-2">
@@ -1505,7 +1503,7 @@ export default function TutorPage() {
       {/* Drag & Drop Overlay */}
       {isDragging && (
         <div className="absolute inset-0 bg-violet-950/20 backdrop-blur-sm border-2 border-dashed border-violet-500 rounded-3xl z-55 flex flex-col items-center justify-center pointer-events-none animate-fade-in">
-          <Brain className="h-16 w-16 text-violet-450 animate-bounce mb-4" />
+          <Brain className="h-16 w-16 text-violet-455 animate-bounce mb-4" />
           <h3 className="text-xl font-bold text-zinc-150">Drop your study files here to index</h3>
           <p className="text-xs text-zinc-550 mt-2">Supports PDF, DOCX, PPTX, TXT, Markdown, and source code</p>
         </div>

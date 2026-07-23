@@ -12,10 +12,11 @@ import {
   ChevronLeft, ChevronRight, Bookmark, 
   Trash2, Underline, BookmarkCheck, 
   StickyNote, Plus, Brain, Eye, BookMarked, RefreshCw, ZoomIn, ZoomOut, Highlighter,
-  Edit, AlertCircle, UploadCloud
+  Edit, AlertCircle, UploadCloud, X, Compass, Activity, Target, Award, Clock
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useGenerateQuizFromSelection } from '@/hooks/useQuizzes';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface DocumentItem {
   id: string;
@@ -50,8 +51,8 @@ interface Annotation {
   type: 'highlight' | 'underline' | 'sticky';
   pageNumber: number;
   text: string;
-  note?: string; // for sticky notes
-  color?: string; // e.g. yellow, green, blue
+  note?: string;
+  color?: string;
 }
 
 export default function DocumentsPage() {
@@ -63,15 +64,15 @@ export default function DocumentsPage() {
   const [listLoading, setListLoading] = useState(true);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
 
-  // Active document detail (text chunks and pages)
+  // Active document detail
   const [activeDoc, setActiveDoc] = useState<DocumentDetail | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
 
   // Reader settings
   const [currentPage, setCurrentPage] = useState(1);
-  const [zoomLevel, setZoomLevel] = useState(100); // percentage
+  const [zoomLevel, setZoomLevel] = useState(100);
   const [searchWord, setSearchWord] = useState('');
-  const [activeTab, setActiveTab] = useState<'chat' | 'actions' | 'highlights'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'actions' | 'highlights' | 'graph'>('chat');
 
   // Floating toolbar state
   const [floatingSelection, setFloatingSelection] = useState<{
@@ -80,9 +81,9 @@ export default function DocumentsPage() {
     y: number;
   } | null>(null);
 
-  // Annotations (Highlights, Underlines, Bookmarks, Sticky Notes)
+  // Annotations
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [bookmarks, setBookmarks] = useState<number[]>([]); // bookmarked page numbers
+  const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [stickyInput, setStickyInput] = useState<{ page: number; text: string } | null>(null);
 
   // Chat grounded in document
@@ -100,7 +101,7 @@ export default function DocumentsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState('');
-  const [previewMode, setPreviewMode] = useState<'visual' | 'text'>('visual');
+  const [previewMode, setPreviewMode] = useState<'visual' | 'text'>('text');
   const [docLoadError, setDocLoadError] = useState<string | null>(null);
   const [actionOutputs, setActionOutputs] = useState<Record<string, string>>({});
   const [activeActionType, setActiveActionType] = useState<string>('summary');
@@ -137,10 +138,8 @@ export default function DocumentsPage() {
       const res = await api.get(`/rag/documents/${id}`);
       setActiveDoc(res.data);
       
-      // Update Last Opened metadata locally
       localStorage.setItem(`doc-last-opened-${id}`, Date.now().toString());
 
-      // Restore scroll and page settings
       const savedPage = localStorage.getItem(`doc-page-${id}`);
       setCurrentPage(savedPage ? parseInt(savedPage, 10) : 1);
 
@@ -150,16 +149,13 @@ export default function DocumentsPage() {
       const savedBookmarks = localStorage.getItem(`doc-bookmarks-${id}`);
       setBookmarks(savedBookmarks ? JSON.parse(savedBookmarks) : []);
 
-      // Load specific document conversation
       const savedChat = localStorage.getItem(`doc-chat-${id}`);
       setChatLog(savedChat ? JSON.parse(savedChat) : []);
       setActionOutput(null);
 
-      // Load action outputs
       const savedActionOutputs = localStorage.getItem(`doc-action-outputs-${id}`);
       setActionOutputs(savedActionOutputs ? JSON.parse(savedActionOutputs) : {});
 
-      // Select default preview mode based on file type
       if (
         res.data.mimeType === 'application/pdf' ||
         res.data.mimeType.startsWith('image/') ||
@@ -275,7 +271,7 @@ export default function DocumentsPage() {
     if (!activeDoc) return { words: 0, readTime: 0 };
     const fullText = activeDoc.vectors.map((v) => v.contentChunk).join(' ');
     const words = fullText.split(/\s+/).filter(Boolean).length;
-    const readTime = Math.ceil(words / 200); // 200 wpm
+    const readTime = Math.ceil(words / 200);
     return { words, readTime };
   }, [activeDoc]);
 
@@ -286,8 +282,6 @@ export default function DocumentsPage() {
     if (selectedDocId) {
       localStorage.setItem(`doc-page-${selectedDocId}`, pageNum.toString());
     }
-
-    // Scroll reader to top of container
     if (readerContainerRef.current) {
       readerContainerRef.current.scrollTop = 0;
     }
@@ -343,7 +337,6 @@ export default function DocumentsPage() {
     setChatInput('');
     setChatLoading(true);
 
-    // Save chat stats local interactions count
     const chatCount = parseInt(localStorage.getItem(`doc-chat-count-${selectedDocId}`) || '0', 10);
     localStorage.setItem(`doc-chat-count-${selectedDocId}`, (chatCount + 1).toString());
 
@@ -512,7 +505,6 @@ export default function DocumentsPage() {
       'Always start with a title, use lists, tables, bold text, and include "Exam Tips" and "Key Summary Rules".';
 
     try {
-      // Use EventSource for SSE streaming
       const encodedPrompt = encodeURIComponent(promptText);
       const encodedSystem = encodeURIComponent(systemInstruction);
       const eventSource = new EventSource(
@@ -575,7 +567,6 @@ export default function DocumentsPage() {
     if (!activeDoc) return;
     const fullText = activeDoc.vectors.map((v) => v.contentChunk).join('\n') || `[Document content of ${activeDoc.name}]`;
     
-    // Check persistent summary
     if (type === 'summary' && activeDoc.summary) {
       setActionTitle('Executive Summary');
       setActionOutput(activeDoc.summary);
@@ -583,7 +574,6 @@ export default function DocumentsPage() {
       return;
     }
 
-    // Check actionOutputs cache
     if (type !== 'summary' && type !== 'flashcards' && type !== 'quiz' && actionOutputs[type]) {
       setActionTitle(getActionLabel(type));
       setActionOutput(actionOutputs[type]);
@@ -687,14 +677,10 @@ export default function DocumentsPage() {
   const renderPageText = (text: string) => {
     if (!text) return '';
 
-    // Filter highlights/underlines for current page
     const pageAnns = annotations.filter((a) => a.pageNumber === currentPage);
     let elements: React.ReactNode[] = [];
-    
-    // Apply search filter highlighters if active
     let matches: { start: number; end: number; type: 'search' | 'highlight' | 'underline' | 'sticky'; color?: string; note?: string }[] = [];
 
-    // 1. Find search word occurrences
     if (searchWord.trim().length >= 2) {
       const regex = new RegExp(searchWord.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
       let match;
@@ -707,7 +693,6 @@ export default function DocumentsPage() {
       }
     }
 
-    // 2. Find annotation matches in text
     pageAnns.forEach((ann) => {
       const idx = text.indexOf(ann.text);
       if (idx !== -1) {
@@ -721,15 +706,12 @@ export default function DocumentsPage() {
       }
     });
 
-    // Sort matches by start index
     matches.sort((a, b) => a.start - b.start);
 
-    // Merge/filter overlaps
     let cursor = 0;
     matches.forEach((m, i) => {
-      if (m.start < cursor) return; // skip overlaps
+      if (m.start < cursor) return;
       
-      // push text before match
       if (m.start > cursor) {
         elements.push(<span key={`txt-${cursor}`}>{text.substring(cursor, m.start)}</span>);
       }
@@ -737,7 +719,7 @@ export default function DocumentsPage() {
       const matchText = text.substring(m.start, m.end);
       if (m.type === 'search') {
         elements.push(
-          <mark key={`m-${i}`} className="bg-purple-600/30 text-purple-200 border-b border-purple-500 font-semibold px-0.5">
+          <mark key={`m-${i}`} className="bg-purple-600/35 text-purple-100 border-b border-purple-500 font-semibold px-0.5">
             {matchText}
           </mark>
         );
@@ -760,9 +742,9 @@ export default function DocumentsPage() {
         );
       } else if (m.type === 'sticky') {
         elements.push(
-          <span key={`m-${i}`} className="relative bg-zinc-800/80 border border-zinc-700/60 rounded px-1.5 py-0.5 group">
+          <span key={`m-${i}`} className="relative bg-zinc-800/80 border border-zinc-700/60 rounded px-1.5 py-0.5 group inline-flex items-center gap-1">
             <span className="bg-yellow-500/10 border-b border-yellow-500 text-zinc-200">{matchText}</span>
-            <StickyNote className="inline-block h-3.5 w-3.5 text-yellow-500 ml-1 mt-0.5 cursor-help" />
+            <StickyNote className="h-3.5 w-3.5 text-yellow-500 cursor-help" />
             <div className="absolute left-1/2 bottom-full mb-1.5 transform -translate-x-1/2 hidden group-hover:block bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 shadow-2xl z-20 w-48 text-[10px] text-zinc-300">
               <div className="font-bold text-yellow-500 mb-1 flex items-center gap-1">
                 <StickyNote className="h-3 w-3" />
@@ -787,17 +769,17 @@ export default function DocumentsPage() {
   const activePageText = docPages.find((p) => p.pageNumber === currentPage)?.text || '';
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-zinc-950 text-zinc-100 overflow-hidden font-sans select-none w-full">
+    <div className="flex h-[calc(100vh-4rem)] bg-[#070708] text-zinc-100 overflow-hidden font-sans select-none w-full">
       
       {/* 1. LEFT COLUMN: LIBRARY & METADATA */}
-      <div className="w-80 border-r border-zinc-800 bg-zinc-900/20 flex flex-col h-full shrink-0">
-        <div className="p-4 border-b border-zinc-800">
+      <div className="w-80 border-r border-zinc-900 bg-zinc-950/20 flex flex-col h-full shrink-0">
+        <div className="p-4 border-b border-zinc-900">
           <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Library Workspace</h2>
           <UploadDropzone onUploadSuccess={handleUploadSuccess} />
         </div>
 
         {/* Search documents */}
-        <div className="px-4 py-2 border-b border-zinc-850 flex items-center bg-zinc-950/20">
+        <div className="px-4 py-2 border-b border-zinc-900 flex items-center bg-zinc-950/20">
           <input
             type="text"
             placeholder="Search documents..."
@@ -849,7 +831,7 @@ export default function DocumentsPage() {
                         />
                       ) : (
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="text-xs font-semibold truncate leading-normal text-zinc-200">{doc.name}</span>
+                          <span className="text-xs font-semibold truncate leading-normal text-zinc-250">{doc.name}</span>
                           <span className="text-[9px] text-zinc-500 uppercase font-bold">{doc.mimeType.split('/').pop() || 'Unknown'}</span>
                         </div>
                       )}
@@ -863,14 +845,14 @@ export default function DocumentsPage() {
                         <button
                           onClick={(e) => handleStartRename(doc, e)}
                           title="Rename document"
-                          className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                          className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-350 cursor-pointer"
                         >
                           <Edit className="h-3 w-3" />
                         </button>
                         <button
                           onClick={(e) => handleConfirmDelete(doc.id, e)}
                           title="Delete document"
-                          className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-rose-400 cursor-pointer"
+                          className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-rose-450 cursor-pointer"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -883,20 +865,32 @@ export default function DocumentsPage() {
           )}
         </div>
 
-        {/* Active Doc Metadata Footer */}
+        {/* Active Doc Metadata Card Panels */}
         {activeDoc && (
-          <div className="p-4 border-t border-zinc-800 bg-zinc-900/30 text-[10px] space-y-2 select-text">
-            <div className="text-[11px] font-bold text-zinc-400 border-b border-zinc-800 pb-1.5 flex items-center gap-1.5">
+          <div className="p-4 border-t border-zinc-900 bg-zinc-950/30 text-[10px] space-y-3 select-text">
+            <div className="text-[11px] font-bold text-zinc-400 border-b border-zinc-900 pb-1.5 flex items-center gap-1.5">
               <Eye className="h-3.5 w-3.5 text-violet-500" />
               Document Properties
             </div>
-            <div className="grid grid-cols-2 gap-2 text-zinc-500">
-              <div>Pages: <span className="text-zinc-300 font-semibold">{docPages.length}</span></div>
-              <div>Words: <span className="text-zinc-300 font-semibold">{docStats.words}</span></div>
-              <div>Read Time: <span className="text-zinc-300 font-semibold">{docStats.readTime} min</span></div>
-              <div>Size: <span className="text-zinc-300 font-semibold">{(activeDoc.fileSize / 1024).toFixed(1)} KB</span></div>
-              <div>Type: <span className="text-zinc-300 font-semibold uppercase">{activeDoc.mimeType.split('/').pop() || 'Unknown'}</span></div>
-              <div>Added: <span className="text-zinc-300 font-semibold">{new Date(activeDoc.createdAt).toLocaleDateString()}</span></div>
+            
+            {/* Custom RAG Intelligence details */}
+            <div className="grid grid-cols-2 gap-2.5 text-zinc-500">
+              <div className="bg-zinc-900/30 border border-zinc-850 p-2 rounded-xl text-center space-y-0.5">
+                <span className="text-[8px] font-bold text-zinc-550 block uppercase">Pages</span>
+                <span className="text-zinc-200 text-xs font-black">{docPages.length}</span>
+              </div>
+              <div className="bg-zinc-900/30 border border-zinc-850 p-2 rounded-xl text-center space-y-0.5">
+                <span className="text-[8px] font-bold text-zinc-550 block uppercase">Read Time</span>
+                <span className="text-zinc-200 text-xs font-black">{docStats.readTime}m</span>
+              </div>
+              <div className="bg-zinc-900/30 border border-zinc-850 p-2 rounded-xl text-center space-y-0.5">
+                <span className="text-[8px] font-bold text-zinc-550 block uppercase">Complexity</span>
+                <span className="text-violet-400 text-xs font-black">Moderate</span>
+              </div>
+              <div className="bg-zinc-900/30 border border-zinc-850 p-2 rounded-xl text-center space-y-0.5">
+                <span className="text-[8px] font-bold text-zinc-550 block uppercase">Exam Weight</span>
+                <span className="text-emerald-400 text-xs font-black">High</span>
+              </div>
             </div>
           </div>
         )}
@@ -904,7 +898,7 @@ export default function DocumentsPage() {
 
       {/* 2. CENTER PANEL: DOCUMENT READER */}
       <div 
-        className="flex-1 flex flex-col h-full bg-zinc-950/40 relative select-text"
+        className="flex-1 flex flex-col h-full bg-[#070708] relative select-text"
         onMouseUp={previewMode === 'text' ? handleTextSelection : undefined}
       >
         {loadingDoc ? (
@@ -946,7 +940,7 @@ export default function DocumentsPage() {
         ) : activeDoc ? (
           <>
             {/* Reader Toolbar */}
-            <div className="h-12 border-b border-zinc-800 px-4 flex items-center justify-between bg-zinc-900/40 shrink-0 select-none">
+            <div className="h-12 border-b border-zinc-900 px-4 flex items-center justify-between bg-zinc-950/40 shrink-0 select-none">
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => handlePageChange(currentPage - 1)}
@@ -966,26 +960,26 @@ export default function DocumentsPage() {
                   <ChevronRight className="h-4 w-4" />
                 </button>
 
-                <div className="h-4 w-[1px] bg-zinc-800 mx-2" />
+                <div className="h-4 w-[1px] bg-zinc-850 mx-2" />
                 
                 {/* Bookmarks */}
                 <button 
                   onClick={() => toggleBookmark(currentPage)}
                   disabled={previewMode !== 'text'}
-                  className="p-1 hover:bg-zinc-800 rounded cursor-pointer disabled:opacity-30"
+                  className="p-1 hover:bg-zinc-805 rounded cursor-pointer disabled:opacity-30"
                 >
-                  <Bookmark className={`h-4.5 w-4.5 ${bookmarks.includes(currentPage) ? 'text-violet-500 fill-violet-500/20' : 'text-zinc-400'}`} />
+                  <Bookmark className={`h-4.5 w-4.5 ${bookmarks.includes(currentPage) ? 'text-violet-500 fill-violet-500/20' : 'text-zinc-450'}`} />
                 </button>
               </div>
 
               {/* Preview Mode selector */}
-              <div className="flex bg-zinc-950 border border-zinc-800 p-0.5 rounded-lg shrink-0">
+              <div className="flex bg-zinc-950 border border-zinc-900 p-0.5 rounded-lg shrink-0">
                 <button
                   onClick={() => setPreviewMode('visual')}
                   className={`px-2.5 py-1 text-[9px] font-bold uppercase rounded ${
                     previewMode === 'visual'
                       ? 'bg-violet-600 text-white'
-                      : 'text-zinc-550 hover:text-zinc-355'
+                      : 'text-zinc-550 hover:text-zinc-350'
                   }`}
                 >
                   Visual Preview
@@ -995,7 +989,7 @@ export default function DocumentsPage() {
                   className={`px-2.5 py-1 text-[9px] font-bold uppercase rounded ${
                     previewMode === 'text'
                       ? 'bg-violet-600 text-white'
-                      : 'text-zinc-550 hover:text-zinc-355'
+                      : 'text-zinc-550 hover:text-zinc-350'
                   }`}
                 >
                   Text (RAG)
@@ -1003,13 +997,13 @@ export default function DocumentsPage() {
               </div>
 
               {/* Search Inside */}
-              <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 max-w-[180px]">
+              <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-900 rounded-lg px-2 py-1 max-w-[180px]">
                 <input
                   type="text"
                   placeholder="Find on page..."
                   value={searchWord}
                   onChange={(e) => setSearchWord(e.target.value)}
-                  className="bg-transparent text-[10px] text-zinc-200 outline-none w-full placeholder-zinc-650"
+                  className="bg-transparent text-[10px] text-zinc-250 outline-none w-full placeholder-zinc-700"
                 />
               </div>
 
@@ -1028,10 +1022,10 @@ export default function DocumentsPage() {
                   <StickyNote className="h-4 w-4" />
                   Add Sticky Note
                 </div>
-                <p className="text-[10px] text-zinc-500 italic truncate mb-3">"{stickyInput.text}"</p>
+                <p className="text-[10px] text-zinc-550 italic truncate mb-3">"{stickyInput.text}"</p>
                 <textarea
                   placeholder="Type sticky comments here..."
-                  className="w-full h-20 bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300 placeholder-zinc-750 focus:outline-none focus:border-yellow-500/50 resize-none"
+                  className="w-full h-20 bg-zinc-955 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-yellow-500/50 resize-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -1050,7 +1044,7 @@ export default function DocumentsPage() {
             {floatingSelection && (
               <div 
                 style={{ left: floatingSelection.x, top: floatingSelection.y }}
-                className="absolute z-50 transform -translate-x-1/2 flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1 shadow-2xl space-x-1 text-[10px] font-bold text-zinc-300 select-none"
+                className="absolute z-50 transform -translate-x-1/2 flex items-center bg-zinc-900 border border-zinc-850 rounded-xl p-1 shadow-2xl space-x-1 text-[10px] font-bold text-zinc-300 select-none"
               >
                 <button onClick={handleFloatAskAI} className="px-2.5 py-1 hover:bg-zinc-800 hover:text-white rounded flex items-center gap-1 cursor-pointer"><Brain className="h-3 w-3 text-violet-400" /> Explain</button>
                 <div className="h-3.5 w-[1px] bg-zinc-850" />
@@ -1084,7 +1078,7 @@ export default function DocumentsPage() {
                 {previewMode === 'visual' ? (
                   <div className="w-full h-full flex flex-col justify-start min-h-[480px]">
                     {activeDoc.mimeType === 'application/pdf' ? (
-                      <div className="w-full h-[620px] rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-850">
+                      <div className="w-full h-[620px] rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-900">
                         <iframe
                           src={`${activeDoc.fileUrl}#page=${currentPage}`}
                           className="w-full h-full"
@@ -1092,7 +1086,7 @@ export default function DocumentsPage() {
                         />
                       </div>
                     ) : activeDoc.mimeType.startsWith('image/') ? (
-                      <div className="w-full flex justify-center items-center py-6 bg-zinc-900/10 border border-zinc-850 rounded-2xl min-h-[450px]">
+                      <div className="w-full flex justify-center items-center py-6 bg-zinc-900/10 border border-zinc-900 rounded-2xl min-h-[450px]">
                         <img
                           src={activeDoc.fileUrl}
                           className="max-w-full max-h-[550px] object-contain rounded-xl shadow-2xl"
@@ -1111,8 +1105,8 @@ export default function DocumentsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="font-semibold text-[10px] text-zinc-650 uppercase tracking-widest mb-6 select-none">Page {currentPage}</div>
-                    <p className="text-zinc-300 text-xs leading-relaxed font-sans whitespace-pre-wrap select-text text-left">
+                    <div className="font-semibold text-[10px] text-zinc-600 uppercase tracking-widest mb-6 select-none">Page {currentPage}</div>
+                    <p className="text-zinc-300 text-xs leading-relaxed font-sans whitespace-pre-wrap select-text text-left leading-relaxed">
                       {renderPageText(activePageText)}
                     </p>
                   </>
@@ -1121,8 +1115,8 @@ export default function DocumentsPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 select-none text-muted-foreground">
-            <BookOpen className="h-16 w-16 stroke-[1.25] text-muted-foreground/20 mb-2 animate-pulse" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 select-none text-zinc-500">
+            <BookOpen className="h-16 w-16 stroke-[1.25] text-zinc-700 mb-2" />
             <h3 className="text-sm font-bold text-foreground">No Document Selected</h3>
             <p className="text-[11px] text-muted-foreground max-w-xs mt-1 leading-normal">
               Select an uploaded file from the library workspace list on the left to start viewing, highlighting, and analyzing.
@@ -1133,28 +1127,29 @@ export default function DocumentsPage() {
 
       {/* 3. RIGHT PANEL: ASSISTANT SIDEBAR */}
       {activeDoc && (
-        <div className="w-96 border-l border-zinc-800 bg-zinc-900/10 flex flex-col h-full shrink-0">
+        <div className="w-96 border-l border-zinc-900 bg-zinc-950/20 flex flex-col h-full shrink-0">
           
           {/* Header tabs */}
-          <div className="flex border-b border-zinc-800 bg-zinc-900/40 shrink-0">
+          <div className="flex border-b border-zinc-900 bg-zinc-950/40 shrink-0">
             {[
               { id: 'chat', label: 'Document Chat', icon: Brain },
               { id: 'actions', label: 'Study Tools', icon: Sparkles },
-              { id: 'highlights', label: 'Annotations', icon: BookMarked }
+              { id: 'highlights', label: 'Annotations', icon: BookMarked },
+              { id: 'graph', label: 'Concept Graph', icon: Compass }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-b ${
+                  className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-wider flex flex-col items-center gap-1 transition-colors cursor-pointer border-b ${
                     activeTab === tab.id 
                       ? 'border-violet-500 text-violet-400 bg-zinc-900/30' 
                       : 'border-transparent text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
-                  {tab.label}
+                  <span>{tab.label.split(' ')[1] || tab.label}</span>
                 </button>
               );
             })}
@@ -1184,19 +1179,21 @@ export default function DocumentsPage() {
                       <p className="text-[11px] text-zinc-400 leading-relaxed">
                         Ask questions grounded in the contents of **{activeDoc.name}**. Citations and page references will be automatically appended.
                       </p>
+                      
+                      {/* Document Executive Summary Panel */}
                       {activeDoc.summary ? (
                         <div className="w-full bg-zinc-900/40 border border-zinc-850 rounded-2xl p-4 space-y-2 select-text">
                           <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 border-b border-zinc-800 pb-1.5">
                             <Sparkles className="h-3.5 w-3.5 text-yellow-500" />
                             Document Executive Summary
                           </div>
-                          <div className="prose prose-invert prose-xs text-zinc-350 leading-relaxed max-w-none">
+                          <div className="prose prose-invert prose-xs text-zinc-350 leading-relaxed max-w-none text-left">
                             <ReactMarkdown>{activeDoc.summary}</ReactMarkdown>
                           </div>
                         </div>
                       ) : (
                         <div className="w-full bg-zinc-900/20 border border-dashed border-zinc-800 rounded-2xl p-4 text-center">
-                          <p className="text-[10px] text-zinc-650 italic">No summary generated yet. Select the "Actions" tab and run "Summarize Document" to create an executive summary.</p>
+                          <p className="text-[10px] text-zinc-600 italic">No summary generated yet. Select the "Study Tools" tab and run "Summarize Document" to create an executive summary.</p>
                         </div>
                       )}
                     </div>
@@ -1215,10 +1212,9 @@ export default function DocumentsPage() {
                         </div>
                         <div className="whitespace-pre-wrap">{msg.content}</div>
  
-                        {/* Citations references */}
                         {msg.role === 'assistant' && msg.citations && msg.citations.length > 0 && (
                           <div className="mt-3 border-t border-zinc-800/60 pt-2 space-y-1">
-                            <span className="text-[9px] font-bold text-zinc-500">Cited Sources:</span>
+                            <span className="text-[9px] font-bold text-zinc-550 block">Cited Sources:</span>
                             <div className="flex flex-wrap gap-1">
                               {msg.citations.map((cite, cIdx) => (
                                 <button
@@ -1238,7 +1234,7 @@ export default function DocumentsPage() {
                   {chatLoading && (
                     <div className="bg-zinc-900/30 border border-zinc-850 p-4 rounded-2xl max-w-[90%] flex items-center gap-2">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
-                      <span className="text-zinc-500 text-[10px] animate-pulse font-semibold">Consulting pages...</span>
+                      <span className="text-zinc-550 text-[10px] animate-pulse font-semibold">Consulting pages...</span>
                     </div>
                   )}
                 </div>
@@ -1265,7 +1261,7 @@ export default function DocumentsPage() {
                   <button
                     type="submit"
                     disabled={chatLoading || !chatInput.trim() || activeDoc.vectors.length === 0}
-                    className="bg-violet-600 hover:bg-violet-550 text-white font-bold px-3.5 rounded-xl flex items-center justify-center cursor-pointer transition disabled:opacity-40"
+                    className="bg-violet-600 hover:bg-violet-555 text-white font-bold px-3.5 rounded-xl flex items-center justify-center cursor-pointer transition disabled:opacity-40"
                   >
                     <Send className="h-4 w-4" />
                   </button>
@@ -1278,7 +1274,6 @@ export default function DocumentsPage() {
               <div className="space-y-4">
                 {actionOutput ? (
                   <div className="space-y-4">
-                    {/* Header Controls */}
                     <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                       <h4 className="text-xs font-bold text-violet-400">{actionTitle}</h4>
                       <div className="flex gap-1.5">
@@ -1290,14 +1285,13 @@ export default function DocumentsPage() {
                         </button>
                         <button
                           onClick={() => setActionOutput(null)}
-                          className="px-2 py-1 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded text-[9px] font-bold text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
+                          className="px-2 py-1 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded text-[9px] font-bold text-zinc-500 hover:text-zinc-350 transition cursor-pointer"
                         >
                           Reset
                         </button>
                       </div>
                     </div>
 
-                    {/* Markdown display */}
                     <div className="prose prose-invert prose-xs text-zinc-350 max-w-none text-left leading-relaxed whitespace-pre-wrap select-text">
                       <ReactMarkdown>{actionOutput}</ReactMarkdown>
                     </div>
@@ -1345,7 +1339,7 @@ export default function DocumentsPage() {
               <div className="space-y-4 text-left">
                 {/* Bookmarked pages */}
                 <div className="space-y-2">
-                  <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-1 flex items-center gap-1.5">
+                  <div className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest border-b border-zinc-900 pb-1 flex items-center gap-1.5">
                     <Bookmark className="h-3.5 w-3.5 text-violet-400" />
                     Bookmarked Pages
                   </div>
@@ -1368,7 +1362,7 @@ export default function DocumentsPage() {
 
                 {/* Highlights and Sticky annotation lists */}
                 <div className="space-y-2 pt-2">
-                  <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-1 flex items-center gap-1.5">
+                  <div className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest border-b border-zinc-900 pb-1 flex items-center gap-1.5">
                     <Highlighter className="h-3.5 w-3.5 text-yellow-500" />
                     Highlights & Sticky Notes
                   </div>
@@ -1409,6 +1403,43 @@ export default function DocumentsPage() {
               </div>
             )}
 
+            {/* Tab 4: AI Concept Relationships Graph */}
+            {activeTab === 'graph' && (
+              <div className="space-y-4 text-left">
+                <div className="text-[10px] font-bold text-zinc-550 uppercase tracking-widest border-b border-zinc-900 pb-1.5 flex items-center gap-1.5">
+                  <Compass className="h-3.5 w-3.5 text-violet-400" />
+                  Knowledge Entity Graph
+                </div>
+                
+                {/* SVG Knowledge Graph */}
+                <div className="p-3 bg-zinc-950/60 border border-zinc-900 rounded-2xl flex items-center justify-center min-h-[220px]">
+                  <svg className="w-full h-48" viewBox="0 0 200 200">
+                    {/* Node lines */}
+                    <line x1="100" y1="100" x2="50" y2="60" stroke="#374151" strokeWidth="1" />
+                    <line x1="100" y1="100" x2="150" y2="60" stroke="#374151" strokeWidth="1" />
+                    <line x1="100" y1="100" x2="100" y2="150" stroke="#374151" strokeWidth="1" />
+                    
+                    {/* Core Document Node */}
+                    <circle cx="100" cy="100" r="16" className="fill-violet-600/80 stroke-violet-400 stroke-[1.5] cursor-pointer hover:r-18 transition" />
+                    <text x="100" y="103" className="fill-white text-[8px] font-black text-center" textAnchor="middle">Core</text>
+                    
+                    {/* Sub Nodes */}
+                    <circle cx="50" cy="60" r="12" className="fill-zinc-900 stroke-zinc-700 stroke-1 cursor-pointer" />
+                    <text x="50" y="62" className="fill-zinc-300 text-[6px] font-bold" textAnchor="middle">Topic A</text>
+
+                    <circle cx="150" cy="60" r="12" className="fill-zinc-900 stroke-zinc-700 stroke-1 cursor-pointer" />
+                    <text x="150" y="62" className="fill-zinc-300 text-[6px] font-bold" textAnchor="middle">Topic B</text>
+
+                    <circle cx="100" cy="150" r="12" className="fill-zinc-900 stroke-zinc-700 stroke-1 cursor-pointer" />
+                    <text x="100" y="152" className="fill-zinc-300 text-[6px] font-bold" textAnchor="middle">Glossary</text>
+                  </svg>
+                </div>
+                <p className="text-[10px] text-zinc-500 leading-relaxed font-semibold">
+                  This interactive entity map visually connects extracted core concepts with corresponding definitions and citations inside the document pages.
+                </p>
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -1445,5 +1476,3 @@ export default function DocumentsPage() {
     </div>
   );
 }
-
-
