@@ -24,14 +24,15 @@ jobs:
       - name: Generate Prisma Types
         run: npm run db:generate --workspace=@studysync/database
 
-      - name: Run Backend Tests
-        run: npm run test --workspace=api
-
       - name: Build Database package
         run: npm run build --workspace=@studysync/database
+
+      - name: Run Backend Tests
+        run: npm run test --workspace=api
 
       - name: Build API microservice
         run: npm run build --workspace=api
 
       - name: Build Web Application
         run: npm run build --workspace=web
+
