@@ -403,11 +403,10 @@ export default function CalendarPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                Calendar Workspace 3.0
-                <span className="text-[9px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2 py-0.5 rounded-md">AI scheduling OS</span>
+                Calendar Workspace
               </h1>
               <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                Optimize cognitive schedules, manage load levels, and configure auto-revision buffers.
+                Plan, organize, and optimize your study schedule with intelligent recommendations.
               </p>
             </div>
           </div>
@@ -761,10 +760,10 @@ export default function CalendarPage() {
           {/* RIGHT COLUMN: AI CONFLICT ENGINE & FORM CREATORS */}
           <div className="space-y-6">
             
-            {/* AI SCHEDULING ASSISTANT 2.0 */}
+            {/* AI SCHEDULING ASSISTANT */}
             <div className="bg-zinc-900/40 border border-zinc-900 p-6 rounded-[32px] space-y-5 text-left relative overflow-hidden">
               <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 pb-2.5 border-b border-zinc-900 flex items-center justify-between">
-                <span>AI Scheduling Assistant 2.0</span>
+                <span>AI Scheduling Assistant</span>
                 <Sparkles className="w-4 h-4 text-violet-405 animate-pulse" />
               </h3>
 

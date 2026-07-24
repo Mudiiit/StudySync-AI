@@ -211,10 +211,9 @@ export default function FlashcardsPage() {
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
               Memory Intelligence Workspace
-              <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2 py-0.5 rounded-md">Flashcards 2.0</span>
             </h1>
             <p className="text-xs text-zinc-400 font-medium mt-0.5">
-              Intelligent spaced repetition engine ground on SM-2 recall forecasting and dynamic note sync.
+              Review smarter with AI-powered spaced repetition and adaptive memory tracking.
             </p>
           </div>
         </div>

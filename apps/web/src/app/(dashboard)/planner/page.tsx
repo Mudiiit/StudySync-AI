@@ -299,11 +299,10 @@ export default function PlannerPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                  AI Planner 2.0
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2 py-0.5 rounded-md">Strategic Brain</span>
+                  AI Planner
                 </h1>
                 <p className="text-xs text-zinc-400 font-medium mt-0.5">
-                  Cognitive Schedule Optimizer grounded in your Tutor memory & Knowledge Engine.
+                  Plan smarter with AI-powered scheduling personalized to your study habits.
                 </p>
               </div>
             </div>
